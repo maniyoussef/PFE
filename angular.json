@@ -20,20 +20,20 @@
             "outputPath": "dist/ticket-management-front-end",
             "index": "src/index.html",
             "browser": "src/main.ts",
-            "polyfills": [
-              "zone.js"
-            ],
+            "polyfills": ["zone.js"],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
               {
                 "glob": "**/*",
-                "input": "public"
+                "input": "public",
+                "output": "/"
               }
             ],
-            "styles": [
-              "src/styles.scss"
-            ],
+            "stylePreprocessorOptions": {
+              "includePaths": ["src", "node_modules"]
+            },
+            "styles": ["src/styles.scss"],
             "scripts": []
           },
           "configurations": {
@@ -62,12 +62,16 @@
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
+          "options": {
+            "browserTarget": "TicketManagementFrontEnd:build",
+            "proxyConfig": "proxy.config.json"
+          },
           "configurations": {
             "production": {
-              "buildTarget": "TicketManagementFrontEnd:build:production"
+              "browserTarget": "TicketManagementFrontEnd:build:production"
             },
             "development": {
-              "buildTarget": "TicketManagementFrontEnd:build:development"
+              "browserTarget": "TicketManagementFrontEnd:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -78,25 +82,27 @@
         "test": {
           "builder": "@angular-devkit/build-angular:karma",
           "options": {
-            "polyfills": [
-              "zone.js",
-              "zone.js/testing"
-            ],
+            "polyfills": ["zone.js", "zone.js/testing"],
             "tsConfig": "tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
               {
                 "glob": "**/*",
-                "input": "public"
+                "input": "public",
+                "output": "/"
               }
             ],
-            "styles": [
-              "src/styles.scss"
-            ],
+            "stylePreprocessorOptions": {
+              "includePaths": ["src", "node_modules"]
+            },
+            "styles": ["src/styles.scss"],
             "scripts": []
           }
         }
       }
     }
+  },
+  "cli": {
+    "analytics": false
   }
 }

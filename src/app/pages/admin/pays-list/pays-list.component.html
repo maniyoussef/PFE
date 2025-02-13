@@ -1,0 +1,67 @@
+<div class="admin-dashboard-container">
+  <app-top-bar></app-top-bar>
+  <app-navbar></app-navbar>
+  <main class="admin-main-content">
+    <div class="pays-container">
+      <h2 class="pays-title">Liste des Pays</h2>
+
+      <div class="spinner-container" *ngIf="isLoading">
+        <mat-spinner diameter="50"></mat-spinner>
+      </div>
+
+      <div class="pays-grid" *ngIf="!isLoading">
+        <div *ngFor="let country of pays" class="pays-card">
+          <div class="icon-container">
+            <img
+              [src]="'https://flagcdn.com/48x36/' + country.code + '.png'"
+              [alt]="country.name"
+              class="country-flag"
+              (error)="handleFlagError($event)"
+            />
+          </div>
+          <div class="pays-info">
+            <h3>{{ country.name }}</h3>
+            <p class="country-code">{{ country.code.toUpperCase() }}</p>
+          </div>
+          <button mat-icon-button color="warn" (click)="deleteCountry(country)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <div class="ajouter-pays-form">
+        <mat-form-field appearance="fill" class="country-select">
+          <mat-label>Sélectionnez un pays</mat-label>
+          <mat-select
+            [(ngModel)]="nouveauPays"
+            (selectionChange)="onCountrySelect($event.value)"
+          >
+            <mat-option
+              *ngFor="let country of countryOptions"
+              [value]="country"
+            >
+              <div class="country-option">
+                <img
+                  [src]="'https://flagcdn.com/24x18/' + country.code + '.png'"
+                  class="country-flag-small"
+                  (error)="handleFlagError($event)"
+                />
+                <span
+                  >{{ country.name }} ({{ country.code.toUpperCase() }})</span
+                >
+              </div>
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="ajouterPays()"
+          [disabled]="!nouveauPays"
+        >
+          <mat-icon>add</mat-icon> Ajouter un Pays
+        </button>
+      </div>
+    </div>
+  </main>
+</div>

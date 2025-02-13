@@ -1,0 +1,334 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
+
+:host {
+  display: block;
+  --orange: #ff9800;
+  --dark-orange: #f57c00;
+  font-family: "Poppins", sans-serif;
+}
+
+.hero-section {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+  color: white;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+
+  &::before {
+    content: "";
+    position: absolute;
+    width: 200%;
+    height: 200%;
+    background: repeating-linear-gradient(
+      45deg,
+      var(--orange) 0%,
+      var(--orange) 10%,
+      transparent 10%,
+      transparent 50%
+    );
+    background-size: 20px 20px;
+    opacity: 0.03;
+    animation: backgroundMove 30s linear infinite;
+  }
+
+  .content {
+    position: relative;
+    z-index: 2;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 4rem 2rem;
+
+    h1 {
+      font-size: 5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--orange) 0%, #ffd54f 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: titleGlow 3s ease-in-out infinite;
+    }
+
+    p {
+      font-size: 1.5rem;
+      max-width: 600px;
+      margin-bottom: 3rem;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    button {
+      padding: 1rem 2.5rem;
+      font-size: 1.2rem;
+      border-radius: 50px;
+      background: linear-gradient(135deg, var(--orange) 0%, #ffa726 100%);
+      border: none;
+      color: white;
+      font-weight: 500;
+      letter-spacing: 1px;
+      box-shadow: 0 10px 20px rgba(255, 152, 0, 0.3);
+      transition: all 0.3s ease;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 30px rgba(255, 152, 0, 0.4);
+      }
+    }
+  }
+}
+
+.about-section {
+  background: #ffffff;
+  padding: 8rem 2rem;
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 152, 0, 0.1) 0%,
+      rgba(255, 167, 38, 0.1) 100%
+    );
+    clip-path: polygon(25% 0%, 100% 0%, 100% 100%, 0% 100%);
+  }
+
+  .content {
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+  }
+
+  h2 {
+    color: #333;
+    font-size: 3rem;
+    margin-bottom: 3rem;
+    font-weight: 700;
+    position: relative;
+    display: inline-block;
+
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: -10px;
+      left: 0;
+      width: 60%;
+      height: 4px;
+      background: var(--orange);
+      border-radius: 2px;
+    }
+  }
+
+  mat-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    position: relative;
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 5px;
+      background: linear-gradient(90deg, var(--orange) 0%, #ffd54f 100%);
+    }
+
+    mat-card-content {
+      padding: 2rem;
+      font-size: 1.2rem;
+      line-height: 1.8;
+      color: #555;
+    }
+  }
+}
+
+.products-section {
+  background: #f8f9fa;
+  padding: 8rem 2rem;
+  position: relative;
+  overflow: hidden;
+
+  .content {
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+  }
+
+  h2 {
+    color: #333;
+    font-size: 3rem;
+    margin-bottom: 4rem;
+    text-align: center;
+    font-weight: 700;
+  }
+
+  .products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2.5rem;
+    padding: 2rem 0;
+  }
+}
+
+.product-card {
+  background: white;
+  border-radius: 20px;
+  padding: 2.5rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  &:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+
+    &::before {
+      opacity: 1;
+    }
+
+    .mat-icon {
+      transform: scale(1.1) rotate(5deg);
+    }
+  }
+}
+.progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--orange) 0%, #ffd54f 100%);
+  z-index: 1000;
+  transition: opacity 0.3s ease;
+}
+
+.hero-parallax {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+
+  .particle {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    pointer-events: none;
+    transition: transform 0.1s ease;
+
+    @for $i from 1 through 20 {
+      &:nth-child(#{$i}) {
+        width: random(20) + px;
+        height: random(20) + px;
+        left: random(100) + vw;
+        top: random(100) + vh;
+        animation: float#{$i} random(10) + 5s infinite linear;
+      }
+    }
+  }
+}
+
+.product-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+
+  .stat {
+    text-align: center;
+
+    .value {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--orange);
+    }
+
+    .label {
+      font-size: 0.875rem;
+      color: #666;
+    }
+  }
+}
+
+.rotate-on-hover {
+  transition: transform 0.3s ease;
+  &:hover {
+    transform: rotate(180deg);
+  }
+}
+
+.product-card {
+  cursor: pointer;
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  .expand-button {
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  &:hover .expand-button {
+    opacity: 1;
+  }
+
+  &.expanded {
+    grid-column: span 2;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes float1 {
+  0% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(20px, 20px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+@keyframes float2 {
+  0% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-20px, 10px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+// Add more float animations as needed

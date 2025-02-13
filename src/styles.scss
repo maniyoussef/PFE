@@ -1,1 +1,92 @@
-/* You can add global styles to this file, and also import other style files */
+// styles.scss
+@use "@angular/material" as mat;
+@import url("https://fonts.googleapis.com/css2?family=Kanit:wght@400&display=swap");
+@import url("https://fonts.googleapis.com/icon?family=Material+Icons");
+
+// Include the common styles for Angular Material
+@include mat.core();
+
+// Define custom orange palette
+$custom-orange: (
+  50: #fdf1e7,
+  100: #fcdec4,
+  200: #fac89d,
+  300: #f7b275,
+  400: #f5a258,
+  500: #e26e15,
+  // Your main orange color
+  600: #d66613,
+  700: #c35b10,
+  800: #b1510e,
+  900: #913e09,
+  contrast: (
+    50: rgba(black, 0.87),
+    100: rgba(black, 0.87),
+    200: rgba(black, 0.87),
+    300: rgba(black, 0.87),
+    400: rgba(black, 0.87),
+    500: white,
+    600: white,
+    700: white,
+    800: white,
+    900: white,
+  ),
+);
+
+// Define the palettes
+$primary: mat.define-palette($custom-orange);
+$accent: mat.define-palette(mat.$pink-palette);
+$warn: mat.define-palette(mat.$red-palette);
+
+// Create the theme object
+$theme: mat.define-light-theme(
+  (
+    color: (
+      primary: $primary,
+      accent: $accent,
+      warn: $warn,
+    ),
+  )
+);
+
+// Apply the theme
+@include mat.all-component-themes($theme);
+
+// Global styles for full-screen layout
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  width: 100vw;
+  font-family: "Kanit", sans-serif;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+// Ensure app-root takes full height
+app-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}
+
+// Common styles
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+// Color variables based on your Figma design
+:root {
+  --black: #000000;
+  --dark-red: #210606;
+  --light-gray: #d9d9d9;
+  --orange: #e26e15;
+  --white: #ffffff;
+}
+
+// Add Material Icons font
+@import url("https://fonts.googleapis.com/icon?family=Material+Icons");

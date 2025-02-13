@@ -1,0 +1,90 @@
+@use "@angular/material" as mat;
+
+:host {
+  --orange: #ff9800;
+  --dark-orange: #f57c00;
+  --white: #ffffff;
+}
+
+.main-content {
+  min-height: calc(100vh - 160px);
+  background: linear-gradient(135deg, var(--orange) 0%, #ffa726 100%);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.title {
+  font-size: 2.5rem;
+  color: var(--white);
+  text-align: center;
+  margin-bottom: 2rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  width: 100%;
+  max-width: 1200px;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 15px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  }
+
+  mat-card-content {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .icon-container {
+    background: var(--orange);
+    border-radius: 50%;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+
+    mat-icon {
+      color: white;
+      font-size: 2.5rem;
+      width: 2.5rem;
+      height: 2.5rem;
+    }
+  }
+
+  .stat-info {
+    text-align: center;
+
+    h2 {
+      color: mat.get-color-from-palette(mat.$orange-palette, 800);
+      margin-bottom: 1rem;
+    }
+
+    p {
+      color: mat.get-color-from-palette(mat.$grey-palette, 700);
+      line-height: 1.6;
+    }
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .title {
+    font-size: 2rem;
+  }
+}

@@ -1,0 +1,27 @@
+<!-- navbar.component.html -->
+<div class="logo-section">
+  <img src="/logo.png" alt="SimSoft Logo" class="logo-image" />
+  <div class="logo-text">
+    <span class="text-black">Sim</span><span class="text-orange">Soft</span>
+  </div>
+  <div class="toolbar-icons">
+    <mat-icon>search</mat-icon>
+    <mat-icon>language</mat-icon>
+    <mat-icon>notifications</mat-icon>
+    <mat-icon>account_circle</mat-icon>
+    <!-- Ensure this icon is available in Material Icons -->
+  </div>
+</div>
+
+<mat-toolbar class="navbar">
+  <nav class="nav-links">
+    <a routerLink="/admin-dashboard" class="nav-link">Tableau de bord</a>
+    <a routerLink="/admin-dashboard/tickets" class="nav-link">Tickets</a>
+    <a routerLink="/ticket-status" class="nav-link">Statut des Tickets</a>
+    <a routerLink="/admin-dashboard/problems" class="nav-link"
+      >Catégorie des Problèmes</a
+    >
+    <a routerLink="/roles" class="nav-link">Données de Base</a>
+    <a routerLink="/statistics" class="nav-link">Statistiques</a>
+  </nav>
+</mat-toolbar>

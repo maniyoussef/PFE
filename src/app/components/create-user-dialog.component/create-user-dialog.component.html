@@ -1,0 +1,56 @@
+<h2 mat-dialog-title>Create New User</h2>
+<mat-dialog-content>
+  <form #userForm="ngForm">
+    <mat-form-field appearance="fill">
+      <mat-label>Name</mat-label>
+      <input matInput [(ngModel)]="newUser.name" name="name" required />
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Email</mat-label>
+      <input
+        matInput
+        type="email"
+        [(ngModel)]="newUser.email"
+        name="email"
+        required
+      />
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Phone</mat-label>
+      <input matInput [(ngModel)]="newUser.phoneNumber" name="phone" required />
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Country</mat-label>
+      <mat-select [(ngModel)]="newUser.countryId" name="country" required>
+        <mat-option *ngFor="let country of countries" [value]="country.id">
+          {{ country.name }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Role</mat-label>
+      <mat-select [(ngModel)]="newUser.roleId" name="role" required>
+        <mat-option *ngFor="let role of roles" [value]="role.id">
+          {{ role.name }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-checkbox [(ngModel)]="newUser.isActive" name="active"
+      >Active</mat-checkbox
+    >
+    <mat-checkbox [(ngModel)]="newUser.hasContract" name="contract"
+      >Has Contract</mat-checkbox
+    >
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Cancel</button>
+  <button mat-raised-button color="primary" (click)="createUser()">
+    Create
+  </button>
+</mat-dialog-actions>

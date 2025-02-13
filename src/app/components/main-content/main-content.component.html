@@ -1,0 +1,20 @@
+<div class="main-content">
+  <h1 class="title">Dashboard Overview</h1>
+  <div class="stats-grid">
+    <mat-card
+      *ngFor="let stat of stats"
+      class="stat-card"
+      [routerLink]="stat.link"
+    >
+      <mat-card-content>
+        <div class="icon-container">
+          <mat-icon [fontIcon]="stat.icon"></mat-icon>
+        </div>
+        <div class="stat-info">
+          <h2>{{ stat.title }}</h2>
+          <p class="stat-value">{{ stat.value }}</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

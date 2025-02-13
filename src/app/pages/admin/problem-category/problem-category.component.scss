@@ -1,0 +1,151 @@
+// problem-category.component.scss
+.problem-category-container {
+  min-height: calc(100vh - 114px);
+  background: linear-gradient(135deg, var(--orange) 0%, #ffa726 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.problem-category-title {
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 2rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.problem-category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 1200px;
+}
+
+.problem-category-card {
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 15px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+
+  &:hover {
+    transform: translateY(-5px) scale(1.03);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  }
+
+  mat-card-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem;
+    position: relative;
+  }
+
+  .icon-container {
+    background-color: var(--orange);
+    border-radius: 50%;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    mat-icon {
+      font-size: 2rem;
+      height: 2rem;
+      width: 2rem;
+      color: white;
+    }
+  }
+
+  .category-info {
+    text-align: center;
+
+    h3 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--dark-red);
+      margin-bottom: 0.25rem;
+      word-break: break-word;
+    }
+  }
+
+  .delete-btn {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  &:hover .delete-btn {
+    opacity: 1;
+  }
+}
+
+.ajouter-category-form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2rem;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 1rem;
+  border-radius: 15px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 600px;
+
+  .mat-mdc-form-field {
+    flex: 1;
+    margin-right: 1rem;
+  }
+
+  button {
+    height: 56px;
+    display: flex;
+    align-items: center;
+    background: var(--dark-red);
+    color: white;
+    font-weight: bold;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: var(--orange);
+      transform: scale(1.05);
+    }
+
+    mat-icon {
+      margin-right: 0.5rem;
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .ajouter-category-form {
+    flex-direction: column;
+    align-items: stretch;
+
+    .mat-mdc-form-field {
+      margin-right: 0;
+      margin-bottom: 1rem;
+      width: 100%;
+    }
+
+    button {
+      width: 100%;
+    }
+  }
+}
+
+.spinner-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}

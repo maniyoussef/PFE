@@ -1,0 +1,128 @@
+.pays-container {
+  min-height: calc(100vh - 114px);
+  background: linear-gradient(135deg, var(--orange) 0%, #ffa726 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.pays-title {
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 2rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.pays-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  width: 100%;
+  max-width: 1200px;
+}
+
+.pays-card {
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 15px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  position: relative;
+
+  &:hover {
+    transform: translateY(-10px) scale(1.05);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+  }
+
+  .icon-container {
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .country-flag {
+    width: 48px;
+    height: 36px;
+    object-fit: cover;
+  }
+
+  .pays-info {
+    text-align: center;
+
+    h3 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--dark-red);
+      margin-bottom: 0.5rem;
+      word-wrap: break-word;
+      width: 100%;
+    }
+  }
+
+  button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+  }
+}
+
+.ajouter-pays-form {
+  display: flex;
+  align-items: center;
+  margin-top: 4rem;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 1rem;
+  border-radius: 15px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+
+  .mat-mdc-form-field {
+    margin-right: 1rem;
+    width: 250px;
+  }
+
+  button {
+    height: 56px;
+  }
+}
+
+@media (max-width: 600px) {
+  .ajouter-pays-form {
+    flex-direction: column;
+    align-items: stretch;
+
+    .mat-mdc-form-field {
+      margin-right: 0;
+      margin-bottom: 1rem;
+      width: 100%;
+    }
+
+    button {
+      width: 100%;
+    }
+  }
+}
+
+.spinner-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+.country-flag-small {
+  width: 24px;
+  height: 18px;
+  margin-right: 8px;
+  vertical-align: middle;
+}

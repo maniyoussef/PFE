@@ -1,0 +1,47 @@
+<!-- tickets.component.html -->
+<div class="ticket-container">
+  <!-- Top Bar -->
+  <app-top-bar></app-top-bar>
+
+  <!-- Sidebar Navigation -->
+  <app-navbar></app-navbar>
+
+  <!-- Main Content Area -->
+  <main class="ticket-main-content">
+    <div class="tickets-container">
+      <h2 class="tickets-title">Tickets</h2>
+
+      <!-- Loading Indicator -->
+      <div class="spinner-container" *ngIf="isLoading">
+        <mat-spinner diameter="50"></mat-spinner>
+      </div>
+
+      <div class="tickets-grid" *ngIf="!isLoading">
+        <mat-card *ngFor="let ticket of tickets" class="ticket-card">
+          <mat-card-content>
+            <div class="ticket-header">
+              <h3>{{ ticket.title }}</h3>
+              <mat-chip-set>
+                <mat-chip
+                  [style.background-color]="getPriorityColor(ticket.priority)"
+                >
+                  {{ ticket.priority }}
+                </mat-chip>
+              </mat-chip-set>
+            </div>
+
+            <div class="ticket-details">
+              <p><strong>Qualification:</strong> {{ ticket.qualification }}</p>
+              <p><strong>Projet:</strong> {{ ticket.projectName }}</p>
+              <p><strong>Catégorie:</strong> {{ ticket.categoryName }}</p>
+            </div>
+
+            <div class="ticket-description">
+              <p>{{ ticket.description }}</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+  </main>
+</div>

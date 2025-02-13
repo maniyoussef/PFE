@@ -1,0 +1,53 @@
+<h2>Créer un Ticket</h2>
+<form [formGroup]="form">
+  <mat-form-field appearance="outline">
+    <mat-label>Qualification</mat-label>
+    <mat-select formControlName="qualification">
+      <mat-option *ngFor="let q of qualifications" [value]="q">{{
+        q
+      }}</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Projet</mat-label>
+    <mat-select formControlName="project">
+      <mat-option *ngFor="let project of projects" [value]="project.id">
+        {{ project.name }}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Catégorie du problème</mat-label>
+    <mat-select formControlName="category">
+      <mat-option *ngFor="let category of categories" [value]="category.id">
+        {{ category.name }}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Priorité</mat-label>
+    <mat-select formControlName="priority">
+      <mat-option *ngFor="let p of priorities" [value]="p">{{ p }}</mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Titre</mat-label>
+    <input matInput formControlName="title" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Description</mat-label>
+    <textarea matInput formControlName="description"></textarea>
+  </mat-form-field>
+
+  <input type="file" (change)="onFileChange($event)" />
+
+  <div class="actions">
+    <button mat-raised-button color="primary" (click)="submit()">Créer</button>
+    <button mat-button (click)="close()">Annuler</button>
+  </div>
+</form>

@@ -1,0 +1,60 @@
+<!-- companies.component.html -->
+<div class="admin-dashboard-container">
+  <!-- Top Bar -->
+  <app-top-bar></app-top-bar>
+
+  <!-- Sidebar Navigation -->
+  <app-navbar></app-navbar>
+
+  <!-- Main Content Area -->
+  <main class="admin-main-content">
+    <div class="societes-container">
+      <h2 class="societes-title">Liste des Sociétés</h2>
+
+      <!-- Loading Indicator -->
+      <div class="spinner-container" *ngIf="isLoading">
+        <mat-spinner diameter="50"></mat-spinner>
+      </div>
+
+      <div class="societes-grid" *ngIf="!isLoading">
+        <mat-card *ngFor="let societe of societes" class="societe-card">
+          <mat-card-content>
+            <div class="icon-container">
+              <mat-icon>{{ societe.icon }}</mat-icon>
+            </div>
+            <div class="societe-info">
+              <h3>{{ societe.name }}</h3>
+            </div>
+            <button
+              mat-icon-button
+              color="warn"
+              class="delete-btn"
+              (click)="supprimerSociete(societe)"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <div class="ajouter-societe-form">
+        <mat-form-field appearance="fill">
+          <mat-label>Nom de la société</mat-label>
+          <input
+            matInput
+            [(ngModel)]="nouvelleSociete"
+            placeholder="Entrez le nom de la société"
+          />
+        </mat-form-field>
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="ajouterSociete()"
+          [disabled]="!nouvelleSociete.trim()"
+        >
+          <mat-icon>add</mat-icon> Ajouter une Société
+        </button>
+      </div>
+    </div>
+  </main>
+</div>

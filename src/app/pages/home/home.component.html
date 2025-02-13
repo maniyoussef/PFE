@@ -1,0 +1,102 @@
+<div class="homepage">
+  <div class="progress-bar" [style.width.%]="scrollProgress"></div>
+
+  <section class="hero-section" [class.visible]="isHeroVisible">
+    <div class="hero-parallax">
+      <div
+        class="particle"
+        *ngFor="let i of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
+        [style.transform]="
+          'translate(' + mouseX / (i * 20) + 'px, ' + mouseY / (i * 20) + 'px)'
+        "
+      ></div>
+    </div>
+    <div class="content" @fadeInUp>
+      <h1>SIMSOFT</h1>
+      <p>
+        Innovez, Transformez, Excellez - Votre partenaire technologique de
+        confiance pour des solutions d'entreprise sur mesure.<br />
+        Ce site dédié à la gestion des tickets techniques - Pour obtenir nos
+        services,
+        <a href="https://www.simsoft.com.tn/" target="_blank" rel="noopener"
+          >cliquez ici</a
+        >
+      </p>
+      <div class="button-group">
+        <a
+          mat-raised-button
+          matRipple
+          href="https://www.simsoft.com.tn/"
+          target="_blank"
+          rel="noopener"
+          class="external-link-button"
+        >
+          <mat-icon class="rotate-on-hover">rocket_launch</mat-icon>
+          Découvrir Nos Solutions
+        </a>
+        <a mat-raised-button matRipple routerLink="/login" class="login-button">
+          <mat-icon>login</mat-icon>
+          Login
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="about-section">
+    <div class="content" @fadeInUp>
+      <h2>Notre Histoire</h2>
+      <mat-card>
+        <mat-card-content>
+          <p>
+            Depuis notre création en 2000 par l'ingénieur visionnaire SRIHI
+            HATEM, SIMSOFT s'est imposé comme un leader dans l'intégration des
+            systèmes d'information et le développement de solutions B2B
+            innovantes. Notre holding, comprenant SIMSOFT TECHNOLOGY et SIMSOFT
+            INTERNATIONALE, offre des solutions clés en main qui redéfinissent
+            les standards de l'industrie.
+          </p>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </section>
+
+  <section class="products-section">
+    <div class="content">
+      <h2>Nos Solutions Innovantes</h2>
+      <div class="products-grid" @staggerList>
+        <mat-card
+          class="product-card"
+          *ngFor="let product of products; let i = index"
+          #productCard
+          [class.expanded]="expandedProductIndex === i"
+          (mouseleave)="resetCardTilt(i)"
+          (click)="toggleProductExpansion(i)"
+        >
+          <button
+            mat-icon-button
+            class="expand-button"
+            [@rotate]="expandedProductIndex === i ? 'rotated' : 'default'"
+          >
+            <mat-icon>expand_more</mat-icon>
+          </button>
+          <mat-icon [style.color]="product.color">{{ product.icon }}</mat-icon>
+          <h3>{{ product.name }}</h3>
+          <p>{{ product.description }}</p>
+          <div
+            [@expandCollapse]="
+              expandedProductIndex === i ? 'expanded' : 'collapsed'
+            "
+          >
+            <p class="long-description">{{ product.longDescription }}</p>
+            <div class="product-stats">
+              <div class="stat" *ngFor="let stat of product.stats | keyvalue">
+                <div class="value">{{ stat.value }}</div>
+                <div class="label">{{ stat.key }}</div>
+              </div>
+            </div>
+          </div>
+        </mat-card>
+      </div>
+    </div>
+  </section>
+</div>
