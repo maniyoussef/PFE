@@ -1,0 +1,48 @@
+<!-- project.component.html -->
+<div class="dashboard-container">
+  <div class="container">
+    <div class="header">
+      <h2 class="tickets-title">Mes Projets Assignés</h2>
+    </div>
+
+    <div *ngIf="isLoading" class="loading">
+      <mat-spinner diameter="50"></mat-spinner>
+    </div>
+
+    <div *ngIf="!isLoading && projects.length === 0" class="no-tickets">
+      <p>Aucun projet assigné pour le moment</p>
+    </div>
+
+    <div *ngIf="!isLoading && projects.length > 0" class="projects-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Nom du Projet</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Date de Début</th>
+            <th>Date de Fin</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let project of projects" class="project-row">
+            <td>{{ project.name }}</td>
+            <td>{{ project.description }}</td>
+            <td>{{ project.status }}</td>
+            <td>{{ project.startDate | date:'mediumDate' }}</td>
+            <td>{{ project.endDate | date:'mediumDate' }}</td>
+            <td>
+              <button mat-icon-button>
+                <mat-icon>visibility</mat-icon>
+              </button>
+              <button mat-icon-button>
+                <mat-icon>edit</mat-icon>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

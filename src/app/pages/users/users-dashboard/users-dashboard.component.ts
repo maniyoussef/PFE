@@ -1,15 +1,18 @@
 import { Component, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatToolbarModule } from '@angular/material/toolbar'; // ✅ Angular Material Toolbar
-import { TopBarComponent } from '../../../components/top-bar/top-bar.component';
+import { Router, RouterModule } from '@angular/router';
+import { TopBarComponent } from '../../../components/AdminComponents/top-bar/top-bar.component';
 import { UserNavbarComponent } from '../../../components/UserComponents/user-navbar/user-navbar.component';
 import { UsersMainContentComponent } from '../../../components/UserComponents/user-maincontent/user-maincontent.component';
+
 @Component({
   selector: 'app-users-dashboard',
   standalone: true,
   imports: [
     CommonModule,
     MatToolbarModule,
+    RouterModule,
     UserNavbarComponent,
     TopBarComponent,
     UsersMainContentComponent,
@@ -19,4 +22,6 @@ import { UsersMainContentComponent } from '../../../components/UserComponents/us
   styleUrls: ['./users-dashboard.component.scss'], // ✅ Changed from `styleUrl` to `styleUrls`
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
-export class UsersDashboardComponent {}
+export class UsersDashboardComponent {
+  constructor(public router: Router) {}
+}

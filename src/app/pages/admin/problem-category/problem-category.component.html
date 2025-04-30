@@ -1,63 +1,51 @@
 <!-- problem-category.component.html -->
-<div class="admin-dashboard-container">
-  <!-- Top Bar -->
-  <app-top-bar></app-top-bar>
+<div class="category-container">
+  <h1>Problem Categories</h1>
 
-  <!-- Sidebar Navigation -->
-  <app-navbar></app-navbar>
+  <div class="category-form">
+    <form class="form-container" (ngSubmit)="addCategory()">
+      <mat-form-field class="form-field" appearance="outline">
+        <mat-label>Category Name</mat-label>
+        <input
+          matInput
+          [(ngModel)]="newCategoryName"
+          name="categoryName"
+          required
+        />
+      </mat-form-field>
+      <button
+        mat-raised-button
+        color="primary"
+        type="submit"
+        [disabled]="!newCategoryName"
+      >
+        Add Category
+      </button>
+    </form>
+  </div>
 
-  <!-- Main Content Area -->
-  <main class="admin-main-content">
-    <div class="problem-category-container">
-      <h2 class="problem-category-title">Catégories des Problèmes</h2>
+  <div *ngIf="error" class="error-message">
+    {{ error }}
+  </div>
 
-      <!-- Loading Indicator -->
-      <div class="spinner-container" *ngIf="isLoading">
-        <mat-spinner diameter="50"></mat-spinner>
+  <div *ngIf="isLoading" class="loading-spinner">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+
+  <div *ngIf="!isLoading" class="category-list">
+    <mat-card *ngFor="let category of categories" class="category-card">
+      <div>
+        <h3 class="category-name">{{ category.name }}</h3>
       </div>
-
-      <div class="problem-category-grid" *ngIf="!isLoading">
-        <mat-card
-          *ngFor="let category of categories"
-          class="problem-category-card"
-        >
-          <mat-card-content>
-            <div class="icon-container">
-              <mat-icon>category</mat-icon>
-            </div>
-            <div class="category-info">
-              <h3>{{ category.name }}</h3>
-            </div>
-            <button
-              mat-icon-button
-              color="warn"
-              class="delete-btn"
-              (click)="deleteCategory(category.id!)"
-            >
-              <mat-icon>delete</mat-icon>
-            </button>
-          </mat-card-content>
-        </mat-card>
-      </div>
-
-      <div class="ajouter-category-form">
-        <mat-form-field appearance="fill">
-          <mat-label>Nom de la catégorie</mat-label>
-          <input
-            matInput
-            [(ngModel)]="newCategoryName"
-            placeholder="Entrez le nom de la catégorie"
-          />
-        </mat-form-field>
+      <div class="card-actions">
         <button
-          mat-raised-button
-          color="primary"
-          (click)="addCategory()"
-          [disabled]="!newCategoryName.trim()"
+          mat-icon-button
+          class="delete-button"
+          (click)="deleteCategory(category.id)"
         >
-          <mat-icon>add</mat-icon> Ajouter une Catégorie
+          <mat-icon>delete</mat-icon>
         </button>
       </div>
-    </div>
-  </main>
+    </mat-card>
+  </div>
 </div>

@@ -1,52 +1,114 @@
-<div class="mes-tickets-container">
-  <h1>Mes Tickets</h1>
+<div class="dashboard-container">
+  <!-- Navigation elements -->
+  <div class="navigation">
+    <app-top-bar></app-top-bar>
+    <app-user-navbar></app-user-navbar>
+  </div>
+  
+  <!-- Main content -->
+  <div class="container">
+    <div class="header">
+      <h1>Mes Tickets</h1>
+      <div class="actions">
+        <button
+          mat-raised-button
+          color="accent"
+          (click)="refreshTickets()"
+          [disabled]="isLoading"
+          matTooltip="Rafraîchir la liste des tickets"
+        >
+          <mat-icon>refresh</mat-icon>
+          Rafraîchir
+        </button>
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="openCreateTicketDialog()"
+        >
+          <mat-icon>add</mat-icon>
+          Créer un Ticket
+        </button>
+        <button
+          mat-button
+          color="warn"
+          routerLink="/users/fix-identity"
+          matTooltip="Résoudre les problèmes d'identité utilisateur"
+        >
+          <mat-icon>build</mat-icon>
+          Corriger Identité
+        </button>
+      </div>
+    </div>
 
-  <button mat-raised-button color="primary" (click)="openCreateTicketDialog()">
-    Créer Ticket
-  </button>
+    <!-- Loading state -->
+    <div *ngIf="isLoading" class="loading">
+      <mat-spinner diameter="50"></mat-spinner>
+    </div>
 
-  <div class="ticket-list">
-    <table mat-table [dataSource]="tickets" class="mat-elevation-z8">
-      <!-- Ticket ID Column -->
-      <ng-container matColumnDef="id">
-        <th mat-header-cell *matHeaderCellDef>ID</th>
-        <td mat-cell *matCellDef="let ticket">{{ ticket.id }}</td>
-      </ng-container>
+    <!-- No tickets state -->
+    <div *ngIf="!isLoading && tickets.length === 0" class="no-tickets">
+      <p>Aucun ticket trouvé</p>
+      <p *ngIf="currentUserId !== 3">
+        <strong>Problème détecté:</strong> Votre ID utilisateur ({{ currentUserId }}) ne correspond pas à votre compte (ID 3).
+        <a routerLink="/users/fix-identity">Cliquez ici pour corriger le problème</a>.
+      </p>
+    </div>
 
-      <!-- Title Column -->
-      <ng-container matColumnDef="title">
-        <th mat-header-cell *matHeaderCellDef>Titre</th>
-        <td mat-cell *matCellDef="let ticket">{{ ticket.title }}</td>
-      </ng-container>
-
-      <!-- Description Column -->
-      <ng-container matColumnDef="description">
-        <th mat-header-cell *matHeaderCellDef>Description</th>
-        <td mat-cell *matCellDef="let ticket">{{ ticket.description }}</td>
-      </ng-container>
-
-      <!-- Status Column -->
-      <ng-container matColumnDef="status">
-        <th mat-header-cell *matHeaderCellDef>Statut</th>
-        <td mat-cell *matCellDef="let ticket">{{ ticket.status }}</td>
-      </ng-container>
-
-      <!-- Actions Column -->
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef>Actions</th>
-        <td mat-cell *matCellDef="let ticket">
-          <button mat-icon-button (click)="editTicket(ticket)">
-            <mat-icon>edit</mat-icon>
-          </button>
-          <button mat-icon-button (click)="deleteTicket(ticket)">
-            <mat-icon>delete</mat-icon>
-          </button>
-        </td>
-      </ng-container>
-
-      <!-- Header and Row Definitions -->
-      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-    </table>
+    <!-- Ticket list -->
+    <div *ngIf="!isLoading && tickets.length > 0" class="tickets-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Titre</th>
+            <th>Qualification</th>
+            <th>Projet</th>
+            <th>Catégorie du problème</th>
+            <th>Status</th>
+            <th>Date de création</th>
+            <th>Fichier attaché</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let ticket of tickets"
+            [class.row-highlighted]="selectedTicket === ticket"
+          >
+            <td>{{ ticket.title }}</td>
+            <td>{{ ticket.qualification }}</td>
+            <td>{{ ticket.project?.name || "Non spécifié" }}</td>
+            <td>{{ ticket.problemCategory?.name || "Non spécifié" }}</td>
+            <td>
+              <mat-chip [style.backgroundColor]="getStatusColor(ticket.status)">
+                {{ ticket.status || "Statut non spécifié" }}
+              </mat-chip>
+            </td>
+            <td>{{ formatCreatedDate(ticket.createdAt) }}</td>
+            <td>
+              <a
+                *ngIf="ticket.attachment"
+                [href]="'http://localhost:5000' + ticket.attachment"
+                target="_blank"
+              >
+                {{ ticket.attachment.split("/").pop() }}
+              </a>
+              <span *ngIf="!ticket.attachment">Aucun fichier</span>
+            </td>
+            <td>
+              <button mat-button (click)="showDescription(ticket)">
+                Description
+              </button>
+              <button
+                mat-icon-button
+                color="accent"
+                (click)="openCommentDialog(ticket)"
+              >
+                <mat-icon>comment</mat-icon>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>

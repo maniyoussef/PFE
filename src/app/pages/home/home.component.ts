@@ -1,3 +1,4 @@
+// src/app/pages/home/home.component.ts
 import {
   Component,
   OnInit,
@@ -12,16 +13,17 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatRippleModule } from '@angular/material/core';
 import { RouterModule } from '@angular/router';
-
 import {
-  trigger,
-  transition,
-  style,
   animate,
   query,
   stagger,
   state,
+  style,
+  transition,
+  trigger,
 } from '@angular/animations';
+import { AuthService } from '../../services/auth.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-home',
@@ -34,7 +36,7 @@ import {
     MatCardModule,
     MatIconModule,
     MatRippleModule,
-    RouterModule, // Add this if you use routerLink in the template
+    RouterModule,
   ],
   animations: [
     trigger('fadeInUp', [
@@ -148,6 +150,8 @@ export class HomeComponent implements OnInit {
     },
   ];
 
+  constructor(private router: Router, public auth: AuthService) {}
+
   @HostListener('window:scroll', [])
   onWindowScroll() {
     const scrollTop =
@@ -200,7 +204,9 @@ export class HomeComponent implements OnInit {
       this.expandedProductIndex === index ? null : index;
   }
 
-  constructor() {}
+  login(): void {
+    this.router.navigate(['/login']);
+  }
 
   ngOnInit(): void {}
 }

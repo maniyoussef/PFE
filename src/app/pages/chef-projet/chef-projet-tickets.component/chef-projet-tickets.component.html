@@ -1,0 +1,136 @@
+<!-- chef-projet-tickets.component.html -->
+<div class="tickets-container">
+  <h2>Mes Tickets</h2>
+
+  <div *ngIf="loading" class="loading">Chargement...</div>
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <div class="tickets-table" *ngIf="!loading && !error">
+    <table>
+      <thead>
+        <tr>
+          <th>Titre</th>
+          <th>Description</th>
+          <th>Projet</th>
+          <th>Statut</th>
+          <th>Priorité</th>
+          <th>Actions</th>
+          <th>Détails</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let ticket of tickets" class="ticket-row">
+          <td>{{ ticket.title }}</td>
+          <td>{{ ticket.description }}</td>
+          <td>{{ ticket.project?.name || "Non spécifié" }}</td>
+          <td>
+            <!-- Display status with normalized case comparison -->
+            <span
+              [ngClass]="{
+                'status-open': ticket.status?.toLowerCase() === 'open',
+                'status-accepted':
+                  ticket.status === STATUS.ACCEPTED ||
+                  ticket.status?.toLowerCase() === 'accepté',
+                'status-assigned':
+                  ticket.status === STATUS.ASSIGNED ||
+                  ticket.status?.toLowerCase() === 'assigné',
+                'status-refused':
+                  ticket.status === STATUS.REFUSED ||
+                  ticket.status?.toLowerCase() === 'refusé'
+              }"
+            >
+              {{ ticket.status }}
+            </span>
+          </td>
+          <td>{{ ticket.priority }}</td>
+          <td class="actions-cell">
+            <!-- Initial state: Open - show Accept/Refuse buttons -->
+            <div *ngIf="ticket.status?.toLowerCase() === 'open'">
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="acceptTicket(ticket.id)"
+              >
+                <mat-icon>check</mat-icon>
+                Accepter
+              </button>
+              <button
+                mat-raised-button
+                color="warn"
+                (click)="openRefuseDialog(ticket)"
+              >
+                <mat-icon>close</mat-icon>
+                Refuser
+              </button>
+            </div>
+
+            <!-- Second state: Accepted - show Assign button -->
+            <div
+              *ngIf="
+                ticket.status === STATUS.ACCEPTED ||
+                ticket.status?.toLowerCase() === 'accepté'
+              "
+            >
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="openAssignDialog(ticket)"
+              >
+                <mat-icon>person_add</mat-icon>
+                Assigner
+              </button>
+            </div>
+
+            <!-- Read-only states: show the status with styling -->
+            <div
+              *ngIf="
+                ticket.status === STATUS.REFUSED ||
+                ticket.status?.toLowerCase() === 'refusé' ||
+                ticket.status === STATUS.ASSIGNED ||
+                ticket.status?.toLowerCase() === 'assigné'
+              "
+            >
+              <span
+                [ngClass]="{
+                  'status-assigned':
+                    ticket.status === STATUS.ASSIGNED ||
+                    ticket.status?.toLowerCase() === 'assigné',
+                  'status-refused':
+                    ticket.status === STATUS.REFUSED ||
+                    ticket.status?.toLowerCase() === 'refusé'
+                }"
+              >
+                {{ ticket.status }}
+              </span>
+
+              <!-- Show assigned user if available -->
+              <div
+                *ngIf="
+                  (ticket.status === STATUS.ASSIGNED ||
+                    ticket.status?.toLowerCase() === 'assigné') &&
+                  ticket.assignedTo
+                "
+                class="assigned-user"
+              >
+                <mat-icon>person</mat-icon>
+                <span>{{ getAssignedToName(ticket) }}</span>
+              </div>
+            </div>
+          </td>
+          <td>
+            <button
+              class="details-button"
+              [routerLink]="['/chef-projet/tickets', ticket.id]"
+            >
+              <mat-icon>visibility</mat-icon>
+              Détails
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div *ngIf="tickets.length === 0" class="no-tickets">
+      Aucun ticket trouvé
+    </div>
+  </div>
+</div>

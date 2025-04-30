@@ -1,0 +1,40 @@
+<!-- collaborateur-navbar.component.html -->
+<nav class="navbar">
+  <div class="navbar-brand">
+    <img src="/logo.png" alt="SimSoft Logo" />
+    <div class="brand-text">
+      <span class="primary">Sim</span><span class="accent">Soft</span>
+    </div>
+  </div>
+
+  <div class="navbar-links">
+    <a routerLink="/collaborateur/dashboard" routerLinkActive="active-link">
+      <mat-icon>dashboard</mat-icon>
+      <span>Tableau de bord</span>
+    </a>
+    <a routerLink="/collaborateur/tickets" routerLinkActive="active-link">
+      <mat-icon>assignment</mat-icon>
+      <span>Mes tickets</span>
+    </a>
+    <a routerLink="/collaborateur/historique" routerLinkActive="active-link">
+      <mat-icon>history</mat-icon>
+      <span>Historique</span>
+    </a>
+  </div>
+
+  <div class="nav-actions">
+    <button class="notifications-button">
+      <mat-icon>notifications</mat-icon>
+    </button>
+
+    <button class="profile-button">
+      <mat-icon>account_circle</mat-icon>
+    </button>
+
+    <button class="logout-button" (click)="logout()">
+      <mat-icon>exit_to_app</mat-icon>
+    </button>
+  </div>
+</nav>
+
+<!-- Placeholder for future notification menu implementation -->

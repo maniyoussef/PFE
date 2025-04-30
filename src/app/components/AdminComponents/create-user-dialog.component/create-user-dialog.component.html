@@ -1,0 +1,125 @@
+<div class="dialog-container">
+  <h2 class="dialog-title slide-in">
+    {{ data.isEdit ? "Edit User" : "Create New User" }}
+  </h2>
+
+  <div *ngIf="isLoading" class="spinner-container">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+
+  <div *ngIf="!isLoading" class="form-container">
+    <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
+      <div class="slide-in" style="animation-delay: 0.05s">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Name</mat-label>
+          <input
+            matInput
+            formControlName="name"
+            placeholder="Enter name"
+            required
+          />
+          <mat-icon matPrefix>person</mat-icon>
+          <mat-error *ngIf="userForm.controls['name'].hasError('required')">
+            Name is required
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <div class="slide-in" style="animation-delay: 0.1s">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Last Name</mat-label>
+          <input
+            matInput
+            formControlName="lastName"
+            placeholder="Enter last name"
+            required
+          />
+          <mat-icon matPrefix>person</mat-icon>
+          <mat-error *ngIf="userForm.controls['lastName'].hasError('required')">
+            Last name is required
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <div class="slide-in" style="animation-delay: 0.15s">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Email</mat-label>
+          <input
+            matInput
+            formControlName="email"
+            placeholder="Enter email"
+            required
+            type="email"
+          />
+          <mat-icon matPrefix>email</mat-icon>
+          <mat-error *ngIf="userForm.controls['email'].hasError('required')">
+            Email is required
+          </mat-error>
+          <mat-error *ngIf="userForm.controls['email'].hasError('email')">
+            Please enter a valid email address
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <div class="slide-in" style="animation-delay: 0.2s">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Country</mat-label>
+          <mat-select formControlName="countryId" required>
+            <mat-option *ngFor="let country of countries" [value]="country.id">
+              <div class="select-option">
+                <img
+                  *ngIf="country.icon"
+                  [src]="country.icon"
+                  alt="Flag"
+                  class="country-flag-small"
+                />
+                {{ country.name }}
+              </div>
+            </mat-option>
+          </mat-select>
+          <mat-icon matPrefix>public</mat-icon>
+          <mat-error
+            *ngIf="userForm.controls['countryId'].hasError('required')"
+          >
+            Country is required
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <div class="slide-in" style="animation-delay: 0.25s">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Role</mat-label>
+          <mat-select formControlName="roleId" required>
+            <mat-option *ngFor="let role of roles" [value]="role.id">
+              {{ role.name }}
+            </mat-option>
+          </mat-select>
+          <mat-icon matPrefix>badge</mat-icon>
+          <mat-error *ngIf="userForm.controls['roleId'].hasError('required')">
+            Role is required
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <div class="dialog-actions slide-in" style="animation-delay: 0.3s">
+        <button
+          mat-button
+          type="button"
+          class="cancel-button"
+          (click)="onCancel()"
+        >
+          Cancel
+        </button>
+        <button
+          mat-raised-button
+          color="primary"
+          type="submit"
+          class="submit-button"
+          [disabled]="userForm.invalid"
+        >
+          {{ data.isEdit ? "Update" : "Create" }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

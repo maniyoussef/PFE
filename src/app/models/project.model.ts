@@ -1,8 +1,11 @@
 export interface Project {
   id: number;
   name: string;
+  status: string;
+  chefProjetId?: number;
+  collaborateurIds?: number[];
+  clientId: number;
   description?: string;
-  status: string; // ✅ Add status property
-  startDate?: string;
-  endDate?: string;
+  startDate?: Date | string;
+  endDate?: Date | string;
 }

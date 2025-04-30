@@ -1,0 +1,104 @@
+<div class="admin-reports-container">
+  <!-- Top Bar (logo and right controls) -->
+ 
+
+  <!-- Main Content Area -->
+  <main class="admin-main-content">
+    <div class="reports-header">
+      <h1 class="title">Rapports des Tickets</h1>
+      <p class="subtitle">Consultez et gérez tous les rapports de tickets refusés</p>
+    </div>
+
+    <div class="reports-content">
+      <div *ngIf="isLoading" class="spinner-container">
+        <mat-progress-spinner
+          color="accent"
+          diameter="50"
+        ></mat-progress-spinner>
+      </div>
+
+      <div *ngIf="!isLoading && tickets.length === 0" class="no-tickets">
+        <mat-icon>info</mat-icon>
+        <p>Aucun rapport trouvé</p>
+      </div>
+
+      <div *ngIf="!isLoading && tickets.length > 0" class="tickets-table">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Titre</th>
+              <th>Projet</th>
+              <th>Catégorie</th>
+              <th>Priorité</th>
+              <th>Status</th>
+              <th>Date de création</th>
+              <th>Rapport</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let ticket of tickets">
+              <td>
+                <span class="ticket-id">{{ ticket.id }}</span>
+              </td>
+              <td>{{ ticket.title }}</td>
+              <td>
+                <span class="project-name">{{ ticket.project?.name || "N/A" }}</span>
+              </td>
+              <td>
+                <span class="category-name">{{ ticket.problemCategory?.name || "N/A" }}</span>
+              </td>
+              <td>
+                <span
+                  class="priority-badge"
+                  [ngClass]="getPriorityClass(ticket.priority)"
+                >
+                  {{ ticket.priority }}
+                </span>
+              </td>
+              <td>
+                <span
+                  class="status-badge"
+                  [ngClass]="getStatusClass(ticket.status)"
+                >
+                  {{ ticket.status }}
+                </span>
+              </td>
+              <td>{{ ticket.createdAt | date : "dd/MM/yyyy HH:mm" }}</td>
+              <td>
+                <div
+                  class="report-preview"
+                  (click)="openReportDialog(ticket)"
+                  matTooltip="Cliquez pour voir le rapport complet"
+                >
+                  <p class="report-text">
+                    {{
+                      ticket.report
+                        ? (ticket.report | slice : 0 : 50) +
+                          (ticket.report.length > 50 ? "..." : "")
+                        : "Aucun rapport disponible"
+                    }}
+                  </p>
+                </div>
+              </td>
+              <td>
+                <button
+                  mat-icon-button
+                  color="primary"
+                  (click)="openReportDialog(ticket)"
+                  matTooltip="Voir le rapport complet"
+                >
+                  <mat-icon>visibility</mat-icon>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Router Outlet for dynamic content -->
+    <router-outlet></router-outlet>
+  </main>
+</div>

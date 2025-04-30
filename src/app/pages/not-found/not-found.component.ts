@@ -2,6 +2,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { TopBarComponent } from '../../components/AdminComponents/top-bar/top-bar.component';
 
 @Component({
   standalone: true,

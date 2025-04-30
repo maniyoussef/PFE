@@ -1,0 +1,251 @@
+<div class="main-content">
+  <div class="header-with-actions">
+    <h1 class="title">Mes Tickets Assignés</h1>
+    <button mat-raised-button color="primary" (click)="refreshTickets()" [disabled]="isLoading">
+      <mat-icon>refresh</mat-icon> Rafraîchir
+    </button>
+  </div>
+
+  <!-- Statistics dashboard with new design -->
+  <div class="stats-wrapper" *ngIf="!isLoading && tickets.length > 0">
+    <div class="stat-card tickets">
+      <div class="stat-title">
+        <mat-icon>assignment</mat-icon>
+        Total tickets
+      </div>
+      <div class="stat-value">{{totalTickets}}</div>
+    </div>
+    <div class="stat-card in-progress">
+      <div class="stat-title">
+        <mat-icon>engineering</mat-icon>
+        En cours
+      </div>
+      <div class="stat-value">{{inProgressTickets}}</div>
+    </div>
+    <div class="stat-card resolved">
+      <div class="stat-title">
+        <mat-icon>check_circle</mat-icon>
+        Résolus
+      </div>
+      <div class="stat-value">{{resolvedTickets}}</div>
+    </div>
+    <div class="stat-card duration">
+      <div class="stat-title">
+        <mat-icon>schedule</mat-icon>
+        Durée moyenne
+      </div>
+      <div class="stat-value">{{averageDuration}}</div>
+    </div>
+  </div>
+
+  <!-- Developer debugging tools -->
+  <div class="developer-tools" style="margin-bottom: 20px; padding: 15px; background-color: #f5f5f5; border-radius: 8px; border: 1px solid #ddd; font-size: 12px; position: relative;">
+    <button style="position: absolute; top: 5px; right: 10px; background: none; border: none; cursor: pointer;" onclick="this.parentElement.style.display='none'">X</button>
+    <h3 style="margin-top: 0; margin-bottom: 10px; font-size: 14px;">Developer Tools</h3>
+    <p style="margin-bottom: 10px; font-weight: bold;">Current active tickets: {{ tickets.length }}</p>
+    <div style="max-height: 300px; overflow-y: auto;">
+      <div *ngFor="let ticket of tickets" style="margin-bottom: 10px; padding: 10px; background-color: white; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <p style="margin-top: 0; margin-bottom: 5px; font-weight: bold; color: #333;">Ticket #{{ ticket.id }}: {{ ticket.title }}</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+          <div style="background-color: #e0f7fa; padding: 5px 10px; border-radius: 3px;">
+            Status: <strong>{{ ticket.status }}</strong>
+          </div>
+          <div style="background-color: #fff8e1; padding: 5px 10px; border-radius: 3px;">
+            Stopped: <strong>{{ ticket.temporarilyStopped }}</strong>
+          </div>
+          <div style="background-color: #f1f8e9; padding: 5px 10px; border-radius: 3px;">
+            Finished: <strong>{{ ticket.workFinished }}</strong>
+          </div>
+          <div style="background-color: #e8eaf6; padding: 5px 10px; border-radius: 3px;">
+            Duration: <strong>{{ formatDurationHumanReadable(ticket.workDuration || 0) }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="spinner-container">
+    <mat-spinner diameter="50"></mat-spinner>
+  </div>
+
+  <div *ngIf="!isLoading && tickets.length === 0" class="no-tickets">
+    <mat-icon>assignment_late</mat-icon>
+    <p>Aucun ticket assigné pour le moment</p>
+    <p class="subtext">Les tickets qui vous seront assignés apparaîtront ici.</p>
+  </div>
+
+  <div *ngIf="!isLoading && tickets.length > 0" class="tickets-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Titre</th>
+          <th>Projet</th>
+          <th>Catégorie</th>
+          <th>Priorité</th>
+          <th>Status</th>
+          <th>Date de création</th>
+          <th>Temps de travail</th>
+          <th>Pièce jointe</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let ticket of tickets" [class.active-row]="activeTimer?.ticketId === ticket.id">
+          <td class="ticket-title">
+            <div class="title-content">
+              <strong>{{ ticket.title }}</strong>
+              <small class="ticket-id">#{{ ticket.id }}</small>
+            </div>
+          </td>
+          <td>
+            <div class="project-cell">
+              <span class="project-tag">{{ ticket.project?.name || "Non spécifié" }}</span>
+            </div>
+          </td>
+          <td>{{ ticket.problemCategory?.name || "Non spécifié" }}</td>
+          <td>
+            <span class="priority-badge" [ngClass]="'priority-' + (ticket.priority ? ticket.priority.toLowerCase().replace(' ', '-') : 'unknown')">
+              {{ ticket.priority || 'Non défini' }}
+            </span>
+          </td>
+          <td>
+            <span [class]="getStatusClass(ticket.status ?? 'Unknown')">
+              <mat-icon>{{getStatusIcon(ticket.status ?? "Unknown")}}</mat-icon>
+              {{ ticket.status ?? "Unknown" }}
+            </span>
+          </td>
+          <td>{{ ticket.createdAt | date : "dd/MM/yyyy HH:mm" }}</td>
+          <td class="work-duration-cell">
+            <div class="duration-badge" [class.active]="activeTimer?.ticketId === ticket.id">
+              <mat-icon>{{ activeTimer?.ticketId === ticket.id ? 'timer' : 'schedule' }}</mat-icon>
+              <span class="timer-text">{{ getWorkDuration(ticket) }}</span>
+            </div>
+          </td>
+          <td>
+            <a
+              [href]="ticket.attachment"
+              target="_blank"
+              *ngIf="ticket.attachment"
+              class="attachment-link"
+            >
+              <mat-icon>attachment</mat-icon>
+              <span>Ouvrir</span>
+            </a>
+            <span *ngIf="!ticket.attachment" class="no-attachment">Aucun fichier</span>
+          </td>
+          <td class="actions-cell">
+            <!-- Debug info in a collapsible panel -->
+            <div class="debug-info">
+              <details>
+                <summary>Debug Info</summary>
+                <div class="debug-content">
+                  <p><strong>Status:</strong> {{ ticket.status }}</p> 
+                  <p><strong>TemporarilyStopped:</strong> {{ ticket.temporarilyStopped }}</p>
+                  <p><strong>WorkFinished:</strong> {{ ticket.workFinished }}</p>
+                </div>
+              </details>
+            </div>
+            
+            <!-- Start Working button specifically for Assigned status -->
+            <button
+              *ngIf="ticket.status === 'ASSIGNED' || ticket.status === 'Assigné' || ticket.status === STATUS.ASSIGNED"
+              mat-raised-button
+              color="primary"
+              (click)="onStartWork(ticket)"
+              matTooltip="Commencer à travailler sur ce ticket"
+              class="action-button start-button"
+            >
+              <mat-icon>play_arrow</mat-icon> Commencer
+            </button>
+            
+            <!-- Resume button for in-progress status that is not temporarily stopped -->
+            <button
+              *ngIf="ticket.status === STATUS.IN_PROGRESS && !ticket.temporarilyStopped && activeTimer?.ticketId !== ticket.id"
+              mat-raised-button
+              color="primary"
+              (click)="onStartWork(ticket)"
+              matTooltip="Commencer à travailler sur ce ticket"
+              class="action-button start-button"
+            >
+              <mat-icon>play_arrow</mat-icon> Commencer
+            </button>
+            
+            <!-- Stop/Finish buttons for active timer -->
+            <div *ngIf="activeTimer?.ticketId === ticket.id" class="working-buttons">
+              <button
+                mat-raised-button
+                class="stop-button"
+                (click)="onStopTemporarily(ticket)"
+                matTooltip="Arrêter temporairement le travail"
+              >
+                <mat-icon>pause</mat-icon> Stop
+              </button>
+              
+              <button
+                mat-raised-button
+                class="finish-button"
+                (click)="onFinish(ticket)"
+                matTooltip="Terminer le travail sur ce ticket"
+              >
+                <mat-icon>stop</mat-icon> Finir
+              </button>
+            </div>
+            
+            <!-- Resume button for paused tickets -->
+            <button
+              *ngIf="ticket.status === STATUS.IN_PROGRESS && ticket.temporarilyStopped === true"
+              mat-raised-button
+              color="primary"
+              (click)="onStartWork(ticket)"
+              matTooltip="Reprendre le travail sur ce ticket"
+              class="action-button resume-button"
+            >
+              <mat-icon>play_arrow</mat-icon> Reprendre
+            </button>
+            
+            <!-- Resolution buttons for finished work -->
+            <div *ngIf="ticket.workFinished === true && ticket.status !== STATUS.RESOLVED && ticket.status !== STATUS.UNRESOLVED" class="resolution-buttons">
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="onResolve(ticket)"
+                matTooltip="Marquer le ticket comme résolu"
+              >
+                <mat-icon>check_circle</mat-icon> Résolu
+              </button>
+              
+              <button
+                mat-raised-button
+                color="warn"
+                (click)="onUnresolve(ticket)"
+                matTooltip="Marquer le ticket comme non résolu"
+              >
+                <mat-icon>report_problem</mat-icon> Non résolu
+              </button>
+            </div>
+            
+            <!-- Common actions for all statuses -->
+            <div class="secondary-actions">
+              <button 
+                mat-button 
+                (click)="showDescription(ticket)"
+                matTooltip="Voir la description complète"
+              >
+                <mat-icon>description</mat-icon> Description
+              </button>
+              
+              <button
+                mat-icon-button
+                color="primary"
+                (click)="openCommentDialog(ticket)"
+                matTooltip="Ajouter un commentaire"
+              >
+                <mat-icon>comment</mat-icon>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

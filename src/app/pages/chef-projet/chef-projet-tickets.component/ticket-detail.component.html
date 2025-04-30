@@ -1,0 +1,29 @@
+<!-- ticket-detail.component.html -->
+<div *ngIf="ticket; else loadingTemplate">
+  <h2>{{ ticket.title }}</h2>
+  <p><strong>Description:</strong> {{ ticket.description }}</p>
+  <p><strong>Status:</strong> {{ ticket.status }}</p>
+  <p><strong>Priority:</strong> {{ ticket.priority }}</p>
+  <p><strong>Project:</strong> {{ ticket.project?.name }}</p>
+  <p><strong>Assigned To:</strong> {{ ticket.assignedTo?.name }}</p>
+  <p><strong>Created At:</strong> {{ ticket.createdAt | date }}</p>
+  <p><strong>Commentaire:</strong> {{ ticket.commentaire }}</p>
+
+  <!-- Assignment Button -->
+  <button
+    mat-raised-button
+    color="primary"
+    (click)="openAssignDialog()"
+    [disabled]="assignmentLoading"
+  >
+    <mat-spinner *ngIf="assignmentLoading" diameter="20"></mat-spinner>
+    <span *ngIf="!assignmentLoading">Assigner à un Collaborateur</span>
+  </button>
+
+  <button routerLink="/chef-projet/tickets">Back to Tickets</button>
+</div>
+
+<ng-template #loadingTemplate>
+  <div *ngIf="loading">Loading ticket details...</div>
+  <div *ngIf="error">{{ error }}</div>
+</ng-template>

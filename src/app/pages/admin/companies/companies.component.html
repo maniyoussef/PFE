@@ -1,10 +1,7 @@
-<!-- companies.component.html -->
+<!-- Main Content Area -->
+<!-- src/app/pages/admin/companies/companies.component.html -->
 <div class="admin-dashboard-container">
-  <!-- Top Bar -->
-  <app-top-bar></app-top-bar>
 
-  <!-- Sidebar Navigation -->
-  <app-navbar></app-navbar>
 
   <!-- Main Content Area -->
   <main class="admin-main-content">
@@ -19,9 +16,6 @@
       <div class="societes-grid" *ngIf="!isLoading">
         <mat-card *ngFor="let societe of societes" class="societe-card">
           <mat-card-content>
-            <div class="icon-container">
-              <mat-icon>{{ societe.icon }}</mat-icon>
-            </div>
             <div class="societe-info">
               <h3>{{ societe.name }}</h3>
             </div>
@@ -38,21 +32,33 @@
       </div>
 
       <div class="ajouter-societe-form">
+        <!-- Company Name -->
         <mat-form-field appearance="fill">
-          <mat-label>Nom de la société</mat-label>
-          <input
-            matInput
-            [(ngModel)]="nouvelleSociete"
-            placeholder="Entrez le nom de la société"
-          />
+          <mat-label>Company Name</mat-label>
+          <input matInput [(ngModel)]="nouvelleSociete" required />
         </mat-form-field>
+
+        <!-- Contact Person -->
+        <mat-form-field appearance="fill">
+          <mat-label>Contact Person</mat-label>
+          <input matInput [(ngModel)]="contactPerson" required />
+        </mat-form-field>
+
+        <!-- Email -->
+        <mat-form-field appearance="fill">
+          <mat-label>Email</mat-label>
+          <input matInput [(ngModel)]="email" type="email" required />
+        </mat-form-field>
+
         <button
           mat-raised-button
           color="primary"
           (click)="ajouterSociete()"
-          [disabled]="!nouvelleSociete.trim()"
+          [disabled]="
+            !nouvelleSociete.trim() || !contactPerson.trim() || !email.trim()
+          "
         >
-          <mat-icon>add</mat-icon> Ajouter une Société
+          <mat-icon>add</mat-icon> Add Company
         </button>
       </div>
     </div>

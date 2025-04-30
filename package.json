@@ -20,6 +20,7 @@
     "@angular/platform-browser": "~16.2.6",
     "@angular/platform-browser-dynamic": "~16.2.6",
     "@angular/router": "~16.2.6",
+    "@auth0/auth0-angular": "^2.2.3",
     "@types/three": "^0.173.0",
     "chart.js": "^4.4.0",
     "gsap": "^3.12.7",
@@ -29,6 +30,7 @@
     "sass": "^1.66.1",
     "three": "^0.173.0",
     "tslib": "^2.6.2",
+    "xlsx": "^0.18.5",
     "zone.js": "~0.13.1"
   },
   "devDependencies": {

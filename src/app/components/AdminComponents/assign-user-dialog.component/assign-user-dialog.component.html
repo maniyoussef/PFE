@@ -1,0 +1,34 @@
+<h2 mat-dialog-title>Assigner un Ticket</h2>
+<mat-dialog-content>
+  <p>
+    Ticket: <strong>{{ data.ticket.title }}</strong>
+  </p>
+
+  <mat-form-field appearance="fill" class="full-width">
+    <mat-label>Sélectionner un collaborateur</mat-label>
+    <mat-select [(ngModel)]="selectedUser">
+      <mat-option
+        *ngFor="let user of users"
+        [value]="user"
+        [disabled]="user.role?.name?.toLowerCase() !== 'collaborateur'"
+      >
+        {{ user.name }} {{ user.lastName }}
+        <span *ngIf="user.role?.name?.toLowerCase() !== 'collaborateur'">
+          (pas un collaborateur)
+        </span>
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close (click)="onCancel()">Annuler</button>
+  <button
+    mat-raised-button
+    color="primary"
+    [disabled]="!selectedUser"
+    (click)="onSave()"
+  >
+    Assigner
+  </button>
+</mat-dialog-actions>

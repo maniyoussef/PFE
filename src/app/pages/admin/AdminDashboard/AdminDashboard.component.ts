@@ -1,16 +1,12 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 
 // Material Modules
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { MatToolbarModule } from '@angular/material/toolbar';
-
-// Child Components
-import { TopBarComponent } from '../../../components/top-bar/top-bar.component';
-import { NavbarComponent } from '../../../components/navbar/navbar.component';
-import { MainContentComponent } from '../../../components/main-content/main-content.component';
+import { MatButtonModule } from '@angular/material/button';
+import { MatGridListModule } from '@angular/material/grid-list';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -20,19 +16,67 @@ import { MainContentComponent } from '../../../components/main-content/main-cont
   imports: [
     CommonModule,
     RouterModule,
-    // Material Modules
     MatCardModule,
     MatIconModule,
-    MatToolbarModule,
-    // Child Components
-    TopBarComponent,
-
-    MainContentComponent,
-    NavbarComponent,
+    MatButtonModule,
+    MatGridListModule,
   ],
 })
-export class AdminDashboardComponent {
+export class AdminDashboardComponent implements OnInit {
+  title = 'Tableau de Bord Administrateur';
+  dashboardCards = [
+    {
+      title: 'Utilisateurs',
+      icon: 'people',
+      route: '/admin/users',
+      buttonText: 'Gérer les Utilisateurs',
+      color: 'primary',
+    },
+    {
+      title: 'Sociétés',
+      icon: 'business',
+      route: '/admin/societes',
+      buttonText: 'Gérer les Sociétés',
+      color: 'primary',
+    },
+    {
+      title: 'Projets',
+      icon: 'folder',
+      route: '/admin/projects',
+      buttonText: 'Gérer les Projets',
+      color: 'primary',
+    },
+    {
+      title: 'Tickets',
+      icon: 'confirmation_number',
+      route: '/admin/tickets',
+      buttonText: 'Gérer les Tickets',
+      color: 'primary',
+    },
+    {
+      title: 'Assignations',
+      icon: 'assignment',
+      route: '/admin/assignement',
+      buttonText: 'Gérer les Assignations',
+      color: 'primary',
+    },
+    {
+      title: 'Débogage',
+      icon: 'bug_report',
+      route: '/admin/client-assignments-debugger',
+      buttonText: 'Debugger les Assignations',
+      color: 'warn',
+    },
+  ];
+
   constructor() {
-    console.log('AdminDashboardComponent initialized');
+    console.log('[AdminDashboard] 🏗️ Component constructed');
+  }
+
+  ngOnInit() {
+    console.log('[AdminDashboard] 🔍 Component initialized', {
+      cardCount: this.dashboardCards.length,
+      timestamp: new Date().toISOString(),
+    });
   }
 }

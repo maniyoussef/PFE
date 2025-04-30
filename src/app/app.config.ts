@@ -1,21 +1,60 @@
 import { ApplicationConfig, importProvidersFrom } from '@angular/core';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http';
+import {
+  provideRouter,
+  withDebugTracing,
+  withRouterConfig,
+} from '@angular/router';
 import { routes } from './app.routes';
-import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { provideAnimations } from '@angular/platform-browser/animations';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { AuthService } from './core/services/auth.service';
+import { authInterceptor } from './interceptors/auth.interceptor';
+import { errorInterceptor } from './interceptors/error.interceptor.fn';
+import { provideClientHydration } from '@angular/platform-browser';
+
+// Material Modules
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCardModule } from '@angular/material/card';
-import { FormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatGridListModule } from '@angular/material/grid-list';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatTableModule } from '@angular/material/table';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideRouter(routes, withComponentInputBinding()), // ✅ Ensure routes are correctly imported
-    provideHttpClient(),
+    provideRouter(
+      routes,
+      withDebugTracing(),
+      withRouterConfig({
+        onSameUrlNavigation: 'reload',
+        paramsInheritanceStrategy: 'always',
+        urlUpdateStrategy: 'eager',
+      })
+    ),
     provideAnimations(),
+    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
+    provideClientHydration(),
     importProvidersFrom(
+      // Material Modules
       MatSnackBarModule,
       MatCardModule,
-      FormsModule // ✅ Correct usage of FormsModule
+      MatButtonModule,
+      MatIconModule,
+      MatGridListModule,
+      MatFormFieldModule,
+      MatInputModule,
+      MatProgressSpinnerModule,
+      MatDialogModule,
+      MatTableModule,
+      MatChipsModule,
+      MatTooltipModule
     ),
+    AuthService,
   ],
 };

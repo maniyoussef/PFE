@@ -1,13 +1,18 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Role } from '../models/role.model';
+
+export interface Role {
+  id: number;
+  name: string;
+  description?: string;
+}
 
 @Injectable({
   providedIn: 'root',
 })
 export class RoleService {
-  private apiUrl = 'http://localhost:5000/api/roles'; // Adjust backend URL if needed
+  private apiUrl = 'http://localhost:5000/api/roles';
 
   constructor(private http: HttpClient) {}
 
@@ -15,8 +20,16 @@ export class RoleService {
     return this.http.get<Role[]>(this.apiUrl);
   }
 
-  addRole(role: Role): Observable<Role> {
+  getRole(id: number): Observable<Role> {
+    return this.http.get<Role>(`${this.apiUrl}/${id}`);
+  }
+
+  createRole(role: Partial<Role>): Observable<Role> {
     return this.http.post<Role>(this.apiUrl, role);
+  }
+
+  updateRole(id: number, role: Partial<Role>): Observable<Role> {
+    return this.http.put<Role>(`${this.apiUrl}/${id}`, role);
   }
 
   deleteRole(id: number): Observable<void> {

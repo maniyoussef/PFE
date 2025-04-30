@@ -1,41 +1,46 @@
 <!-- support.component.html -->
+<div class="admin-dashboard-container">
+  <!-- Top Bar -->
+  <app-top-bar></app-top-bar>
 
-<div class="main-content">
-  <h1 class="title">Support Technique</h1>
+  <!-- Sidebar Navigation -->
+  <div class="main-content">
+    <h1 class="title">Support Technique</h1>
 
-  <div class="stats-grid">
-    <mat-card class="stat-card">
-      <mat-card-content>
-        <div class="icon-container">
-          <mat-icon>support_agent</mat-icon>
-        </div>
-        <div class="stat-info">
-          <h2>Assistance 24/7</h2>
-          <p>Notre équipe est disponible pour vous aider à tout moment</p>
-          <button mat-raised-button color="primary">
-            <mat-icon>contact_support</mat-icon>
-            Ouvrir un ticket
-          </button>
-        </div>
-      </mat-card-content>
-    </mat-card>
+    <div class="stats-grid">
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="icon-container">
+            <mat-icon>support_agent</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h2>Assistance 24/7</h2>
+            <p>Notre équipe est disponible pour vous aider à tout moment</p>
+            <button mat-raised-button color="primary">
+              <mat-icon>contact_support</mat-icon>
+              Ouvrir un ticket
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
 
-    <mat-card class="stat-card">
-      <mat-card-content>
-        <div class="icon-container">
-          <mat-icon>help_center</mat-icon>
-        </div>
-        <div class="stat-info">
-          <h2>Centre d'Aide</h2>
-          <p>
-            Consultez notre base de connaissances pour des solutions rapides
-          </p>
-          <button mat-raised-button color="accent">
-            <mat-icon>library_books</mat-icon>
-            Accéder à la documentation
-          </button>
-        </div>
-      </mat-card-content>
-    </mat-card>
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="icon-container">
+            <mat-icon>help_center</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h2>Centre d'Aide</h2>
+            <p>
+              Consultez notre base de connaissances pour des solutions rapides
+            </p>
+            <button mat-raised-button color="accent">
+              <mat-icon>library_books</mat-icon>
+              Accéder à la documentation
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
   </div>
 </div>

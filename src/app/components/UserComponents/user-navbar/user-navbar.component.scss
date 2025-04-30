@@ -1,86 +1,170 @@
+/* Root variables for consistent design */
+:root {
+  --primary: #ff7043;
+  --primary-dark: #e64a19;
+  --primary-light: #ffccbc;
+  --secondary: #2c3e50;
+  --secondary-dark: #1a2530;
+  --secondary-light: #b0bec5;
+  --text-dark: #263238;
+  --text-medium: #546e7a;
+  --text-light: #90a4ae;
+  --background: #ffffff;
+  --surface: #f8f9fa;
+  --divider: #eceff1;
+  --success: #4caf50;
+  --warning: #ff9800;
+  --danger: #f44336;
+  --info: #2196f3;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.12);
+  --shadow: 0 3px 6px rgba(0, 0, 0, 0.1), 0 3px 6px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.1);
+  --border-radius: 8px;
+  --topbar-height: 40px;
+  --navbar-height: 60px;
+}
+
 /* navbar.component.scss */
 .navbar {
-  background-color: rgba(28, 13, 2, 0.67);
-  height: 62px;
-  padding: 0 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  height: 60px;
+  background-color: white;
+  border-bottom: 1px solid #e9ecef;
+  padding: 0;
   width: 100%;
+  position: fixed;
+  top: 40px; /* Exactly below the topbar */
+  left: 0;
+  z-index: 999;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .logo-section {
   display: flex;
   align-items: center;
-  gap: 15px; /* Slightly increased spacing */
-  padding: 20px;
-  height: 80px; /* Increased height to make logo section stand out */
-  width: 100%; /* Ensure the logo section spans the full width */
+  padding: 0 20px;
+  height: 60px;
+  border-right: 1px solid #e9ecef;
+  background-color: white;
+  min-width: 200px;
 }
 
 .logo-image {
-  width: 50px; /* Slightly larger */
-  height: 50px;
+  width: 32px;
+  height: 32px;
+  margin-right: 10px;
 }
 
 .logo-text {
-  font-size: 40px; /* Increased font size for better proportion */
+  font-size: 20px;
+  font-weight: 700;
   display: flex;
   align-items: center;
-}
-
-.toolbar-icons {
-  margin-left: auto; /* Move icons to the right */
-  display: flex;
-  gap: 10px; /* Spacing between icons */
-  flex-wrap: wrap; /* Wraps icons to fit within the screen size */
-  margin-right: 40px; /* Adds more space from the right edge */
 }
 
 .text-black {
-  color: black;
+  color: #2c3e50;
 }
 
 .text-orange {
-  color: #e36f16;
-}
-
-.navbar {
-  background-color: rgba(17, 8, 2, 0.85);
-  height: 72px; /* Increased height for better balance */
-  padding: 0 30px; /* Added more padding for spacing */
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
+  color: #ff7043;
 }
 
 .nav-links {
   display: flex;
-  gap: 40px; /* Increased spacing between nav items */
+  height: 100%;
+  padding-left: 20px;
 }
 
 .nav-link {
-  color: rgb(248, 245, 245);
-  font-size: 24px; /* Adjusted font size */
-  font-weight: 500;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  color: #495057;
+  font-size: 14px;
   text-decoration: none;
-  white-space: nowrap;
-  padding: 10px 15px; /* Added padding for better clickability */
+  position: relative;
+  
+  &:hover {
+    color: #ff7043;
+  }
+  
+  &.active {
+    color: #ff7043;
+    font-weight: 500;
+    
+    &:after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      width: 100%;
+      background-color: #ff7043;
+    }
+  }
 }
 
-/* Media query for smaller screens */
+.toolbar-icons {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  padding-right: 20px;
+  
+  mat-icon {
+    margin-left: 15px;
+    color: #6c757d;
+    cursor: pointer;
+    font-size: 20px;
+    
+    &:hover {
+      color: #ff7043;
+    }
+  }
+  
+  .logout-icon {
+    color: #dc3545;
+    
+    &:hover {
+      color: #c82333;
+    }
+  }
+}
+
 @media (max-width: 768px) {
-  .toolbar-icons {
-    gap: 5px; /* Reduce gap between icons for smaller screens */
-    margin-right: 20px; /* Adds more space from the right edge */
+  .navbar {
+    height: 55px;
+    top: 36px; /* Match the smaller topbar */
   }
-
-  .nav-links {
-    gap: 20px; /* Reduce gap between nav items for smaller screens */
+  
+  .logo-section {
+    height: 55px;
+    padding: 0 15px;
+    min-width: 160px;
   }
-
+  
+  .logo-image {
+    width: 28px;
+    height: 28px;
+    margin-right: 8px;
+  }
+  
+  .logo-text {
+    font-size: 18px;
+  }
+  
   .nav-link {
-    font-size: 20px; /* Adjust font size for smaller screens */
+    height: 55px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+  
+  .toolbar-icons {
+    padding-right: 15px;
+    
+    mat-icon {
+      margin-left: 12px;
+      font-size: 18px;
+    }
   }
 }

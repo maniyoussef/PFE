@@ -1,0 +1,50 @@
+.dialog-container {
+  padding: 20px;
+  min-width: 500px;
+}
+
+.form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-field {
+  width: 100%;
+}
+
+.file-upload-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-progress {
+  margin-top: 8px;
+}
+
+.button-container {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.error-message {
+  color: #f44336;
+  margin-top: 8px;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}

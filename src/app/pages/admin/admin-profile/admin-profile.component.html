@@ -1,0 +1,33 @@
+<div class="profile-card">
+  <h2>Mon Profil ({{ user?.role?.name }})</h2>
+  <div class="user-info">
+    <p>Nom : {{ user?.name }}</p>
+    <p>Email : {{ user?.email }}</p>
+  </div>
+
+  <h3>Modifier Mot de Passe</h3>
+  <form [formGroup]="passwordForm" (ngSubmit)="onSubmit()">
+    <div class="form-control">
+      <input
+        type="password"
+        placeholder="Ancien mot de passe"
+        formControlName="oldPassword"
+      />
+    </div>
+    <div class="form-control">
+      <input
+        type="password"
+        placeholder="Nouveau mot de passe"
+        formControlName="newPassword"
+      />
+    </div>
+    <div class="form-control">
+      <input
+        type="password"
+        placeholder="Confirmer mot de passe"
+        formControlName="confirmPassword"
+      />
+    </div>
+    <button type="submit" [disabled]="passwordForm.invalid">Enregistrer</button>
+  </form>
+</div>

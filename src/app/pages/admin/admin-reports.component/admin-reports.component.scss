@@ -1,0 +1,250 @@
+// Variables
+$primary-color: #3c3c3c;
+$accent-color: #ff9800;
+$text-color: #333;
+$light-bg: #f8f9fa;
+$white: #fff;
+$border-color: #e0e0e0;
+$hover-color: #f5f5f5;
+
+// Mixins
+@mixin card-shadow {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+@mixin transition {
+  transition: all 0.3s ease;
+}
+
+.admin-reports-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+/* Top Bar Styles - Full width at the very top */
+.topbar {
+  /* No need for additional styles as they're set in the component */
+}
+
+/* Horizontal Navigation Bar Styles - Full width below top bar */
+.horizontal-navbar {
+  /* No need for additional styles as they're set in the component */
+}
+
+/* Main Content Area */
+.admin-main-content {
+  margin-top: 120px; /* Account for fixed navbar (60px) + topbar (40px) + spacing (20px) */
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Reports Header */
+.reports-header {
+  margin-bottom: 30px;
+  
+  .title {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #333;
+  }
+  
+  .subtitle {
+    font-size: 16px;
+    color: #666;
+  }
+}
+
+/* Reports Content */
+.reports-content {
+  background-color: $white;
+  border-radius: 8px;
+  @include card-shadow;
+  padding: 24px;
+  overflow: hidden;
+}
+
+/* Spinner Container */
+.spinner-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+/* No Tickets Message */
+.no-tickets {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+    color: #999;
+  }
+  
+  p {
+    font-size: 18px;
+    color: #666;
+  }
+}
+
+/* Tickets Table */
+.tickets-table {
+  overflow-x: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    
+    th {
+      background-color: #f4f6f8;
+      font-weight: 600;
+      color: #333;
+      position: sticky;
+      top: 0;
+    }
+    
+    tbody tr {
+      &:hover {
+        background-color: #f9f9f9;
+      }
+    }
+  }
+}
+
+/* Priority Badges */
+.priority-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.priority-high {
+  background-color: #ffe0e0;
+  color: #cc0000;
+}
+
+.priority-medium {
+  background-color: #fff0e0;
+  color: #cc6600;
+}
+
+.priority-low {
+  background-color: #e0ffe0;
+  color: #006600;
+}
+
+.priority-unknown {
+  background-color: #e0e0e0;
+  color: #666666;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-open {
+  background-color: #e0e0ff;
+  color: #0000cc;
+}
+
+.status-in-progress {
+  background-color: #e0f0ff;
+  color: #0066cc;
+}
+
+.status-closed {
+  background-color: #e0ffe0;
+  color: #006600;
+}
+
+/* Report Preview */
+.report-preview {
+  max-width: 200px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: #f5f5f5;
+    border-radius: 4px;
+  }
+  
+  .report-text {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #555;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* Dialog Styles */
+::ng-deep .report-dialog-container {
+  .mat-mdc-dialog-container {
+    padding: 0;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .mat-mdc-dialog-content {
+    max-height: 70vh;
+  }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .admin-main-content {
+    margin-top: 96px; /* Reduced spacing for mobile */
+    padding: 16px;
+  }
+
+  .reports-content {
+    padding: 16px;
+  }
+
+  th,
+  td {
+    padding: 10px 12px;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .report-preview {
+    max-width: 200px;
+  }
+}
+
+/* Error Snackbar */
+::ng-deep .error-snackbar {
+  background-color: #f44336;
+  color: white;
+}

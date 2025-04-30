@@ -1,4 +1,5 @@
-<div class="homepage">
+<!-- src/app/pages/home/home.component.html -->
+<div class="home-container">
   <div class="progress-bar" [style.width.%]="scrollProgress"></div>
 
   <section class="hero-section" [class.visible]="isHeroVisible">
@@ -34,10 +35,10 @@
           <mat-icon class="rotate-on-hover">rocket_launch</mat-icon>
           Découvrir Nos Solutions
         </a>
-        <a mat-raised-button matRipple routerLink="/login" class="login-button">
+        <button mat-raised-button color="primary" (click)="login()">
           <mat-icon>login</mat-icon>
           Login
-        </a>
+        </button>
       </div>
     </div>
   </section>

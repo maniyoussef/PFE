@@ -9,10 +9,10 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { NavbarComponent } from '../../../components/navbar/navbar.component';
-import { TopBarComponent } from '../../../components/top-bar/top-bar.component';
+import { TopBarComponent } from '../../../components/AdminComponents/top-bar/top-bar.component';
 import { ProblemCategory } from '../../../models/problem-category.model';
 import { ProblemCategoryService } from '../../../services/problem-category.service';
+import { NavbarComponent } from '../../../components/AdminComponents/navbar/navbar.component';
 
 @Component({
   selector: 'app-problem-category',
@@ -35,68 +35,107 @@ import { ProblemCategoryService } from '../../../services/problem-category.servi
 })
 export class ProblemCategoryComponent implements OnInit {
   categories: ProblemCategory[] = [];
-  newCategoryName = '';
-  isLoading = false;
+  newCategoryName: string = '';
+  isLoading: boolean = false;
+  error: string | null = null;
 
   constructor(
     private categoryService: ProblemCategoryService,
     private snackBar: MatSnackBar
   ) {}
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.loadCategories();
   }
 
-  loadCategories() {
+  loadCategories(): void {
     this.isLoading = true;
+    this.error = null;
+
     this.categoryService.getCategories().subscribe({
-      next: (data) => {
-        this.categories = data;
+      next: (categories) => {
+        this.categories = categories;
         this.isLoading = false;
       },
       error: (error) => {
+        this.error = 'Failed to load categories';
+        this.isLoading = false;
+        this.showErrorMessage('Failed to load categories');
         console.error('Error loading categories:', error);
+      },
+    });
+  }
+
+  addCategory(): void {
+    if (!this.newCategoryName.trim()) {
+      this.showErrorMessage('Category name cannot be empty');
+      return;
+    }
+
+    this.isLoading = true;
+
+    const newCategory: ProblemCategory = {
+      id: '0', // Temporary ID that will be replaced by the server
+      name: this.newCategoryName.trim(),
+    };
+
+    this.categoryService.addCategory(newCategory).subscribe({
+      next: (createdCategory) => {
+        if (createdCategory) {
+          this.categories.push(createdCategory);
+          this.newCategoryName = '';
+          this.isLoading = false;
+          this.showSuccessMessage('Category added successfully');
+        } else {
+          this.isLoading = false;
+          this.showErrorMessage('Failed to add category: No data returned');
+        }
+      },
+      error: (error) => {
         this.isLoading = false;
-        this.snackBar.open('Error loading categories', 'Close', {
-          duration: 3000,
-        });
-      },
-    });
-  }
-
-  addCategory() {
-    if (!this.newCategoryName.trim()) return;
-    this.categoryService.addCategory({ name: this.newCategoryName }).subscribe({
-      next: (category) => {
-        this.categories.push(category);
-        this.newCategoryName = '';
-        this.snackBar.open('Category added successfully', 'Close', {
-          duration: 3000,
-        });
-      },
-      error: (error) => {
+        this.showErrorMessage('Failed to add category');
         console.error('Error adding category:', error);
-        this.snackBar.open('Error adding category', 'Close', {
-          duration: 3000,
-        });
       },
     });
   }
 
-  deleteCategory(id: number) {
-    this.categoryService.deleteCategory(id).subscribe({
+  deleteCategory(id: string | number): void {
+    this.isLoading = true;
+
+    // Convert to string if it's a number
+    const categoryId = id.toString();
+
+    this.categoryService.deleteCategory(categoryId).subscribe({
       next: () => {
-        this.categories = this.categories.filter((cat) => cat.id !== id);
-        this.snackBar.open('Category deleted successfully', 'Close', {
-          duration: 3000,
-        });
+        this.categories = this.categories.filter(
+          (category) => category.id !== id
+        );
+        this.isLoading = false;
+        this.showSuccessMessage('Category deleted successfully');
       },
       error: (error) => {
+        this.isLoading = false;
+        this.showErrorMessage('Failed to delete category');
         console.error('Error deleting category:', error);
-        this.snackBar.open('Error deleting category', 'Close', {
-          duration: 3000,
-        });
       },
+    });
+  }
+
+  private showSuccessMessage(message: string): void {
+    this.snackBar.open(message, 'Close', {
+      duration: 3000,
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom',
+      panelClass: ['success-snackbar'],
+    });
+  }
+
+  private showErrorMessage(message: string): void {
+    this.snackBar.open(message, 'Close', {
+      duration: 5000,
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom',
+      panelClass: ['error-snackbar'],
     });
   }
 }

@@ -1,34 +1,30 @@
 <!-- navbar.component.html -->
-<!-- navbar.component.html -->
-<div class="logo-section">
-  <img src="/logo.png" alt="SimSoft Logo" class="logo-image" />
-  <div class="logo-text">
-    <span class="text-black">Sim</span><span class="text-orange">Soft</span>
-  </div>
-  <div class="toolbar-icons">
-    <mat-icon>search</mat-icon>
-    <mat-icon>language</mat-icon>
-    <mat-icon>notifications</mat-icon>
-    <mat-icon>account_circle</mat-icon>
-    <!-- Ensure this icon is available in Material Icons -->
-  </div>
-</div>
 <mat-toolbar class="navbar">
+  <div class="logo-section">
+    <img src="/logo.png" alt="SimSoft Logo" class="logo-image" />
+    <div class="logo-text">
+      <span class="text-black">Sim</span><span class="text-orange">Soft</span>
+    </div>
+  </div>
+
   <nav class="nav-links">
-    <a routerLink="/users-dashboard" routerLinkActive="active" class="nav-link"
-      >Tableau de bord</a
-    >
-    <a routerLink="/mes-tickets" routerLinkActive="active" class="nav-link"
-      >Mes Tickets</a
-    >
-    <a routerLink="/ticket-status" routerLinkActive="active" class="nav-link"
-      >Statut des Tickets</a
-    >
+    <a routerLink="/user/dashboard" routerLinkActive="active" class="nav-link">
+      Tableau de bord
+    </a>
     <a
-      routerLink="/admin-dashboard/Profil"
+      routerLink="/user/mes-tickets"
       routerLinkActive="active"
       class="nav-link"
-      >Mon Profil</a
     >
+      Mes Tickets
+    </a>
   </nav>
+
+  <div class="toolbar-icons">
+    <mat-icon>notifications</mat-icon>
+    <mat-icon>account_circle</mat-icon>
+    <mat-icon class="logout-icon" (click)="logout()" title="Déconnexion"
+      >exit_to_app</mat-icon
+    >
+  </div>
 </mat-toolbar>

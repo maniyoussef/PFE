@@ -1,0 +1,45 @@
+<h2 mat-dialog-title>Assigner un Ticket</h2>
+<mat-dialog-content>
+  <p>
+    Ticket: <strong>{{ ticketTitle }}</strong>
+  </p>
+
+  <!-- Loading spinner -->
+  <div *ngIf="isLoading" class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Chargement des collaborateurs...</p>
+  </div>
+
+  <!-- Error message -->
+  <div *ngIf="error && !isLoading" class="error-message">
+    <p>{{ error }}</p>
+  </div>
+
+  <!-- Collaborator select -->
+  <mat-form-field *ngIf="!isLoading && !error && collaborateurs.length > 0" appearance="fill" class="full-width">
+    <mat-label>Sélectionner un collaborateur</mat-label>
+    <mat-select [(ngModel)]="selectedUser">
+      <mat-option *ngFor="let user of collaborateurs" [value]="user">
+        {{ user.name }} {{ user.lastName }}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <!-- Empty state -->
+  <div *ngIf="!isLoading && collaborateurs.length === 0 && !error" class="empty-state">
+    <p>Aucun collaborateur n'est assigné à ce chef de projet.</p>
+    <p class="note">Veuillez demander à l'administrateur d'assigner des collaborateurs à votre compte.</p>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close (click)="onCancel()">Annuler</button>
+  <button
+    mat-raised-button
+    color="primary"
+    [disabled]="!selectedUser || isLoading"
+    (click)="onSave()"
+  >
+    Assigner
+  </button>
+</mat-dialog-actions> 

@@ -1,0 +1,224 @@
+<div class="dialog-container">
+  <h2 class="dialog-title slide-in">
+    Edit User Profile
+    <button
+      mat-icon-button
+      type="button"
+      class="edit-toggle-button"
+      (click)="onEdit()"
+      [matTooltip]="isEditing ? 'Disable editing' : 'Enable editing'"
+    >
+      <mat-icon>{{ isEditing ? "lock_open" : "lock" }}</mat-icon>
+    </button>
+  </h2>
+
+  <form [formGroup]="editForm" (ngSubmit)="onSubmit()" class="form-container">
+    <!-- Basic Information -->
+    <mat-form-field
+      appearance="outline"
+      class="slide-in"
+      style="animation-delay: 0.05s"
+    >
+      <mat-label>Name</mat-label>
+      <input matInput formControlName="name" placeholder="Name" />
+      <mat-icon matPrefix>person</mat-icon>
+      <mat-error *ngIf="editForm.get('name')?.hasError('required')">
+        Name is required
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field
+      appearance="outline"
+      class="slide-in"
+      style="animation-delay: 0.1s"
+    >
+      <mat-label>Last Name</mat-label>
+      <input matInput formControlName="lastName" placeholder="Last Name" />
+      <mat-icon matPrefix>person</mat-icon>
+      <mat-error *ngIf="editForm.get('lastName')?.hasError('required')">
+        Last Name is required
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field
+      appearance="outline"
+      class="full-width slide-in"
+      style="animation-delay: 0.15s"
+    >
+      <mat-label>Email</mat-label>
+      <input matInput formControlName="email" placeholder="Email" />
+      <mat-icon matPrefix>email</mat-icon>
+      <mat-error *ngIf="editForm.get('email')?.hasError('required')">
+        Email is required
+      </mat-error>
+      <mat-error *ngIf="editForm.get('email')?.hasError('email')">
+        Invalid email format
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field
+      appearance="outline"
+      class="slide-in"
+      style="animation-delay: 0.2s"
+    >
+      <mat-label>Country</mat-label>
+      <mat-select formControlName="countryId" required>
+        <mat-option *ngFor="let country of data.countries" [value]="country.id">
+          <div class="select-option">
+            <img
+              *ngIf="country.icon"
+              [src]="country.icon"
+              alt="Flag"
+              class="country-flag-small"
+            />
+            {{ country.name }}
+          </div>
+        </mat-option>
+      </mat-select>
+      <mat-icon matPrefix>public</mat-icon>
+      <mat-error *ngIf="editForm.get('countryId')?.hasError('required')">
+        Country is required
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field
+      appearance="outline"
+      class="slide-in"
+      style="animation-delay: 0.25s"
+    >
+      <mat-label>Role</mat-label>
+      <mat-select formControlName="roleId" required>
+        <mat-option *ngFor="let role of data.roles" [value]="role.id">
+          {{ role.name }}
+        </mat-option>
+      </mat-select>
+      <mat-icon matPrefix>badge</mat-icon>
+      <mat-error *ngIf="editForm.get('roleId')?.hasError('required')">
+        Role is required
+      </mat-error>
+    </mat-form-field>
+
+    <!-- Additional Information -->
+    <mat-form-field
+      appearance="outline"
+      class="slide-in"
+      style="animation-delay: 0.3s"
+    >
+      <mat-label>Phone Number</mat-label>
+      <input
+        matInput
+        formControlName="phoneNumber"
+        placeholder="Phone Number"
+      />
+      <mat-icon matPrefix>phone</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field
+      appearance="outline"
+      class="slide-in"
+      style="animation-delay: 0.35s"
+    >
+      <mat-label>Project</mat-label>
+      <mat-select formControlName="projectId">
+        <mat-option [value]="null">None</mat-option>
+        <mat-option *ngFor="let project of data.projects" [value]="project.id">
+          {{ project.name }}
+        </mat-option>
+      </mat-select>
+      <mat-icon matPrefix>work</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field
+      appearance="outline"
+      class="full-width slide-in"
+      style="animation-delay: 0.4s"
+    >
+      <mat-label>Company</mat-label>
+      <mat-select formControlName="companyId">
+        <mat-option [value]="null">None</mat-option>
+        <mat-option *ngFor="let company of data.companies" [value]="company.id">
+          {{ company.name }}
+        </mat-option>
+      </mat-select>
+      <mat-icon matPrefix>business</mat-icon>
+    </mat-form-field>
+
+    <!-- Contract Section -->
+    <div class="contract-section slide-in" style="animation-delay: 0.45s">
+      <div class="section-title">
+        <mat-icon>description</mat-icon>
+        Contract Information
+      </div>
+
+      <div class="toggle-container">
+        <span class="toggle-label">Has Contract</span>
+        <mat-slide-toggle
+          formControlName="hasContract"
+          color="primary"
+          (change)="scrollToBottom()"
+        ></mat-slide-toggle>
+      </div>
+
+      <div class="date-fields" *ngIf="editForm.get('hasContract')?.value">
+        <mat-form-field appearance="outline">
+          <mat-label>Contract Start Date</mat-label>
+          <input
+            matInput
+            [matDatepicker]="startPicker"
+            formControlName="contractStartDate"
+          />
+          <mat-datepicker-toggle
+            matSuffix
+            [for]="startPicker"
+          ></mat-datepicker-toggle>
+          <mat-datepicker #startPicker></mat-datepicker>
+          <mat-icon matPrefix>event</mat-icon>
+          <mat-error
+            *ngIf="editForm.get('contractStartDate')?.hasError('required')"
+          >
+            Start date is required
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Contract End Date</mat-label>
+          <input
+            matInput
+            [matDatepicker]="endPicker"
+            formControlName="contractEndDate"
+          />
+          <mat-datepicker-toggle
+            matSuffix
+            [for]="endPicker"
+          ></mat-datepicker-toggle>
+          <mat-datepicker #endPicker></mat-datepicker>
+          <mat-icon matPrefix>event</mat-icon>
+          <mat-error
+            *ngIf="editForm.get('contractEndDate')?.hasError('required')"
+          >
+            End date is required
+          </mat-error>
+        </mat-form-field>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="dialog-actions slide-in" style="animation-delay: 0.5s">
+      <button mat-button type="button" class="edit-button" (click)="onEdit()">
+        {{ isEditing ? "Cancel Edit" : "Edit" }}
+      </button>
+      <button mat-button type="button" class="cancel-button" mat-dialog-close>
+        Close
+      </button>
+      <button
+        mat-raised-button
+        type="submit"
+        class="submit-button"
+        [disabled]="editForm.invalid || !isEditing"
+        color="primary"
+      >
+        Save Changes
+      </button>
+    </div>
+  </form>
+</div>

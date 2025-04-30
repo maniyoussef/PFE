@@ -1,33 +1,106 @@
+// app.routes.ts
 import { Routes } from '@angular/router';
-import { HomeComponent } from './pages/home/home.component';
-import { NotFoundComponent } from './pages/not-found/not-found.component';
-import { SupportComponent } from './pages/support/support.component';
-import { PolicyComponent } from './pages/policy/policy.component';
-import { AboutComponent } from './pages/about-us/about-us.component';
-import { RolesComponent } from './pages/admin/roles/roles.component';
-import { MesTicketsComponent } from './pages/users/mes-tickets/mes-tickets.component';
-import { UsersDashboardComponent } from './pages/users/users-dashboard/users-dashboard.component';
+import { authGuard } from './guards/auth.guard';
+import { UserRole } from './core/constants/roles';
+import { ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 
 export const routes: Routes = [
-  { path: '', component: HomeComponent },
-  { path: 'support', component: SupportComponent },
-  { path: 'about', component: AboutComponent },
-  { path: 'policy', component: PolicyComponent },
-  { path: 'roles', component: RolesComponent },
-  { path: 'mes-tickets', component: MesTicketsComponent },
+  { path: '', redirectTo: '/login', pathMatch: 'full' },
   {
     path: 'login',
     loadComponent: () =>
-      import('./pages/login/login.component').then((m) => m.LoginComponent),
+      import('./features/auth/login/login.component').then(
+        (m) => m.LoginComponent
+      ),
   },
-
-  { path: 'users-dashboard', component: UsersDashboardComponent },
-
   {
-    path: 'admin-dashboard',
+    path: 'direct-collab',
+    redirectTo: '/collaborateur',
+    pathMatch: 'full',
+  },
+  {
+    path: 'test-admin',
+    redirectTo: '/admin/dashboard',
+    pathMatch: 'full',
+  },
+  {
+    path: 'support',
+    loadComponent: () =>
+      import('./pages/support/support.component').then(
+        (m) => m.SupportComponent
+      ),
+  },
+  {
+    path: 'about',
+    loadComponent: () =>
+      import('./pages/about-us/about-us.component').then(
+        (m) => m.AboutComponent
+      ),
+  },
+  {
+    path: 'policy',
+    loadComponent: () =>
+      import('./pages/policy/policy.component').then((m) => m.PolicyComponent),
+  },
+  {
+    path: 'admin',
     loadChildren: () =>
       import('./pages/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
+    canActivate: [
+      (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => {
+        console.log('[Router] ⭐ Admin guard check');
+        return authGuard([UserRole.ADMIN])(route, state);
+      },
+    ],
   },
-
-  { path: '**', component: NotFoundComponent, pathMatch: 'full' },
+  {
+    path: 'chef-projet',
+    loadChildren: () =>
+      import('./pages/chef-projet/chef-projet.routes').then(
+        (m) => m.CHEF_PROJET_ROUTES
+      ),
+    canActivate: [
+      (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => {
+        console.log('[Router] ⭐ Chef projet guard check');
+        return authGuard([UserRole.CHEF_PROJET])(route, state);
+      },
+    ],
+  },
+  {
+    path: 'client',
+    loadChildren: () =>
+      import('./pages/client/client.routes').then((m) => m.CLIENT_ROUTES),
+    canActivate: [
+      (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => {
+        console.log('[Router] ⭐ Client guard check');
+        return authGuard([UserRole.CLIENT])(route, state);
+      },
+    ],
+  },
+  {
+    path: 'collaborateur',
+    loadChildren: () =>
+      import('./pages/collaborateur/collaborateur.routes').then((m) => {
+        console.log('[Router] 📦 COLLABORATEUR_ROUTES loaded successfully');
+        return m.COLLABORATEUR_ROUTES;
+      }),
+    canActivate: [
+      (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => {
+        console.log('[Router] ⭐ Direct collaborateur guard check');
+        return authGuard([UserRole.COLLABORATEUR])(route, state);
+      },
+    ],
+  },
+  {
+    path: 'user',
+    loadChildren: () =>
+      import('./pages/users/users.routes').then((m) => m.usersRoutes),
+    canActivate: [
+      (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => {
+        console.log('[Router] ⭐ User guard check');
+        return authGuard([UserRole.USER])(route, state);
+      },
+    ],
+  },
+  { path: '**', redirectTo: '/login' },
 ];

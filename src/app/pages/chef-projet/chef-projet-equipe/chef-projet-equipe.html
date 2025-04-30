@@ -1,0 +1,46 @@
+<div class="dashboard-container">
+  <div class="container">
+    <div class="header">
+      <h2 class="tickets-title">Ma Team</h2>
+    </div>
+
+    <div *ngIf="isLoading" class="loading">
+      <mat-spinner diameter="50"></mat-spinner>
+    </div>
+
+    <div *ngIf="!isLoading && collaborators.length === 0" class="no-tickets">
+      <p>Aucun collaborateur assigné pour le moment</p>
+    </div>
+
+    <div
+      *ngIf="!isLoading && collaborators.length > 0"
+      class="collaborators-table"
+    >
+      <table>
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Email</th>
+            <th>Rôle</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let collaborateur of collaborators"
+            class="collaborateur-row"
+          >
+            <td>{{ collaborateur.name }} {{ collaborateur.lastName }}</td>
+            <td>{{ collaborateur.email }}</td>
+            <td>{{ collaborateur.role?.name }}</td>
+            <td>
+              <button mat-icon-button>
+                <mat-icon>visibility</mat-icon>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

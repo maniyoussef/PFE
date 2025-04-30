@@ -22,3 +22,69 @@
     }
   }
 }
+
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  position: relative;
+  padding-top: 100px; /* Space for fixed positioned topbar and navbar */
+
+  app-top-bar,
+  app-user-navbar {
+    width: 100%;
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: fixed;
+    left: 0;
+    z-index: 1000;
+  }
+
+  app-top-bar {
+    top: 0;
+    height: 40px;
+  }
+
+  app-user-navbar {
+    top: 40px; /* Position exactly below topbar */
+    height: 60px;
+    background-color: white;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    z-index: 990; /* Lower than topbar */
+  }
+}
+
+.main-content {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+  background-color: #f5f5f5;
+  position: relative;
+  z-index: 100; /* Ensure content is above the navbar */
+}
+
+/* Make sure router-outlet child components have proper spacing */
+:host ::ng-deep router-outlet + * {
+  display: block;
+  padding: 20px 0;
+}
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding-top: 91px; /* Adjusted for smaller heights: topbar (36px) + navbar (55px) */
+  }
+
+  app-top-bar {
+    height: 36px;
+  }
+
+  app-user-navbar {
+    top: 36px;
+    height: 55px;
+  }
+
+  .main-content {
+    padding: 15px;
+  }
+}

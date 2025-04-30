@@ -1,0 +1,40 @@
+.collaborators-table {
+  @extend .projects-table !optional;
+
+  table {
+    th {
+      background-color: #f0f0f0;
+    }
+
+    tr:hover {
+      background-color: rgba(0, 0, 0, 0.02);
+    }
+
+    .collaborateur-row {
+      cursor: default;
+    }
+  }
+}
+
+/* Define the missing .projects-table class */
+.projects-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+  }
+
+  th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+  }
+
+  tr:hover {
+    background-color: #f1f1f1;
+  }
+}

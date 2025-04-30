@@ -1,4 +1,4 @@
-// companies.component.ts
+// src/app/pages/admin/companies/companies.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
@@ -8,10 +8,10 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { FormsModule } from '@angular/forms';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { CompanyService } from '../../../services/company.service';
-import { TopBarComponent } from '../../../components/top-bar/top-bar.component';
-import { NavbarComponent } from '../../../components/navbar/navbar.component';
+import { Company, CompanyService } from '../../../services/company.service';
+import { TopBarComponent } from '../../../components/AdminComponents/top-bar/top-bar.component';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { NavbarComponent } from '../../../components/AdminComponents/navbar/navbar.component';
 
 @Component({
   selector: 'app-companies',
@@ -33,8 +33,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
   ],
 })
 export class CompaniesComponent implements OnInit {
-  societes: any[] = [];
-  nouvelleSociete: string = '';
+  societes: Company[] = [];
+  nouvelleSociete = '';
+  contactPerson = ''; // New property
+  email = ''; // New property
   isLoading = false;
   error: string | null = null;
 
@@ -69,32 +71,37 @@ export class CompaniesComponent implements OnInit {
   }
 
   ajouterSociete() {
-    if (this.nouvelleSociete.trim()) {
-      const newCompany = {
+    if (
+      this.nouvelleSociete.trim() &&
+      this.contactPerson.trim() &&
+      this.email.trim()
+    ) {
+      const newCompany: Company = {
         name: this.nouvelleSociete.trim(),
-        icon: 'business',
-        sector: 'Nouveau secteur',
+        contactPerson: this.contactPerson.trim(), // DYNAMIC VALUE
+        email: this.email.trim(), // DYNAMIC VALUE
+        phone: '',
+        address: '',
       };
 
       this.companyService.addCompany(newCompany).subscribe({
         next: (company) => {
           this.societes.push(company);
-          this.nouvelleSociete = '';
-          this.snackBar.open('Company added successfully', 'Close', {
-            duration: 3000,
-          });
+          this.resetForm(); // Reset fields
+          this.snackBar.open('Company added!', 'Close', { duration: 3000 });
         },
         error: (error) => {
-          console.error('Error adding company:', error);
-          this.snackBar.open('Error adding company', 'Close', {
-            duration: 3000,
-          });
+          console.error('Error:', error);
+          this.snackBar.open(
+            `Error: ${error.error.errors.Email?.[0] || error.message}`,
+            'Close'
+          );
         },
       });
     }
   }
 
-  supprimerSociete(societe: any) {
+  supprimerSociete(societe: Company) {
     if (societe.id) {
       this.companyService.deleteCompany(societe.id).subscribe({
         next: () => {
@@ -111,5 +118,11 @@ export class CompaniesComponent implements OnInit {
         },
       });
     }
+  }
+
+  private resetForm() {
+    this.nouvelleSociete = '';
+    this.contactPerson = '';
+    this.email = '';
   }
 }

@@ -1,0 +1,414 @@
+/* chef-projet-dashboard.component.scss */
+:root {
+  --orange: #ff9800;
+  --dark-red: #b71c1c;
+}
+
+:host {
+  display: block;
+  height: 100%;
+}
+
+.dashboard-container {
+  height: 100%;
+  background-color: #f5f5f5;
+}
+
+.dashboard-content {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.dashboard-header {
+  margin-bottom: 24px;
+
+  h1 {
+    font-size: 24px;
+    font-weight: 500;
+    color: #333;
+    margin: 0;
+  }
+}
+
+/* Metrics Grid */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.metric-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  mat-card-content {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+  }
+
+  .metric-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    margin-right: 16px;
+
+    mat-icon {
+      color: white;
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
+  }
+
+  .metric-details {
+    flex: 1;
+
+    .metric-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+      margin: 0 0 8px 0;
+    }
+
+    .metric-value {
+      font-size: 28px;
+      font-weight: 600;
+      color: #333;
+      margin: 0;
+    }
+  }
+}
+
+/* Dashboard Row Layout */
+.dashboard-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+
+  @media (max-width: 992px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Common Card Styles */
+.dashboard-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+
+  mat-card-header {
+    padding: 16px 20px;
+    background-color: #fafafa;
+    border-bottom: 1px solid #eee;
+
+    mat-card-title {
+      display: flex;
+      align-items: center;
+      font-size: 18px;
+      font-weight: 500;
+      margin: 0;
+
+      mat-icon {
+        margin-right: 8px;
+        color: #666;
+      }
+    }
+  }
+
+  mat-card-content {
+    padding: 20px;
+  }
+}
+
+/* Project Status Styles */
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.project-item {
+  .project-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+
+    h3 {
+      font-size: 16px;
+      font-weight: 500;
+      margin: 0;
+      color: #333;
+    }
+
+    .project-status {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background-color: #e3f2fd;
+      color: #1976d2;
+
+      &.completed {
+        background-color: #e8f5e9;
+        color: #4caf50;
+      }
+    }
+  }
+
+  .progress-container {
+    display: flex;
+    align-items: center;
+
+    mat-progress-bar {
+      flex: 1;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-value {
+      margin-left: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+      min-width: 40px;
+      text-align: right;
+    }
+  }
+}
+
+/* Ticket Distribution Styles */
+.ticket-distribution {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.distribution-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .distribution-label {
+    display: flex;
+    align-items: center;
+
+    .category-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: #2196f3;
+      margin-right: 8px;
+
+      &:nth-child(4n + 1) {
+        background-color: #2196f3;
+      }
+
+      &:nth-child(4n + 2) {
+        background-color: #4caf50;
+      }
+
+      &:nth-child(4n + 3) {
+        background-color: #ff9800;
+      }
+
+      &:nth-child(4n + 4) {
+        background-color: #f44336;
+      }
+    }
+
+    span {
+      font-size: 14px;
+      color: #333;
+    }
+  }
+
+  .distribution-count {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+  }
+}
+
+/* Activity List Styles */
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+
+  .activity-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: #e3f2fd;
+    margin-right: 12px;
+
+    mat-icon {
+      font-size: 20px;
+      color: #2196f3;
+    }
+  }
+
+  .activity-details {
+    flex: 1;
+
+    .activity-description {
+      font-size: 14px;
+      color: #333;
+      margin: 0 0 4px 0;
+    }
+
+    .activity-date {
+      font-size: 12px;
+      color: #666;
+    }
+  }
+}
+
+/* Main Content Styles */
+.main-content {
+  height: calc(100vh - 114px);
+  background: linear-gradient(135deg, var(--orange) 0%, #ffa726 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  overflow: hidden;
+}
+
+.title {
+  font-size: 3rem;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 2rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  width: 100%;
+  max-width: 1200px;
+}
+
+.stat-card {
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 15px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    transform: translateY(-10px) scale(1.05);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+  }
+
+  mat-card-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+  }
+
+  .icon-container {
+    background-color: var(--orange);
+    border-radius: 50%;
+    padding: 1rem;
+    margin-bottom: 1rem;
+
+    mat-icon {
+      font-size: 3rem;
+      height: 3rem;
+      width: 3rem;
+      color: white;
+    }
+  }
+
+  .stat-info {
+    text-align: center;
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--dark-red);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+      font-size: 3rem;
+      font-weight: 700;
+      color: var(--orange);
+      margin: 0;
+    }
+  }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .dashboard-content {
+    padding: 16px;
+  }
+
+  .metrics-grid {
+    gap: 16px;
+  }
+
+  .dashboard-row {
+    gap: 16px;
+  }
+
+  .metric-card {
+    mat-card-content {
+      padding: 16px;
+    }
+
+    .metric-icon {
+      width: 50px;
+      height: 50px;
+
+      mat-icon {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+      }
+    }
+
+    .metric-details {
+      .metric-value {
+        font-size: 24px;
+      }
+    }
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .title {
+    font-size: 2rem;
+  }
+}

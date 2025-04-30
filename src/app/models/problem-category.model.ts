@@ -1,5 +1,5 @@
 export interface ProblemCategory {
-  id: number;
+  id: string | number;
   name: string;
   description?: string;
 }

@@ -1,10 +1,16 @@
-<div class="admin-dashboard-container">
+<div class="dashboard-container">
   <!-- Top Bar -->
   <app-top-bar></app-top-bar>
-
-  <!-- Sidebar Navigation -->
+  
+  <!-- User Navbar -->
   <app-user-navbar></app-user-navbar>
-  <main class="user-main-content">
-    <app-users-main-content></app-users-main-content>
+  
+  <!-- Main Content Area -->
+  <main class="main-content">
+    <!-- Show main content when no route is active -->
+    <app-users-main-content *ngIf="router.url === '/users/dashboard'"></app-users-main-content>
+    
+    <!-- Router outlet for child routes -->
+    <router-outlet></router-outlet>
   </main>
 </div>

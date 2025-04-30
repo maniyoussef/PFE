@@ -1,84 +1,315 @@
-import { Component, type OnInit } from '@angular/core';
-import { CreateUserDialogComponent } from '../../../components/create-user-dialog.component/create-user-dialog.component';
+import { Component, OnInit, ViewChild } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
+import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
+import { MatSortModule, MatSort } from '@angular/material/sort';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { User } from '../../../models/user.model';
 import { UserService } from '../../../services/user.service';
-import { MatDialog } from '@angular/material/dialog';
-import type { User } from '../../../models/user.model';
-import { TopBarComponent } from '../../../components/top-bar/top-bar.component';
-import { NavbarComponent } from '../../../components/navbar/navbar.component';
+import { TopBarComponent } from '../../../components/AdminComponents/top-bar/top-bar.component';
+import { CountryService } from '../../../services/country.service';
+import { RoleService } from '../../../services/role.service';
+import { CompanyService } from '../../../services/company.service';
+import { ProjectService } from '../../../services/project.service';
+import { ConfirmDialogComponent } from '../../../components/confirm-dialog.component/confirm-dialog.component';
+import { UserDetailsDialogComponent } from '../../../components/user-details-dialog/user-details-dialog.component';
+import { UserDialogComponent } from '../../../components/AdminComponents/create-user-dialog.component/create-user-dialog.component';
+import { EditUserDialogComponent } from '../../../components/AdminComponents/edit-user-dialog.component/edit-user-dialog.component';
+import { NavbarComponent } from '../../../components/AdminComponents/navbar/navbar.component';
 
 @Component({
   selector: 'app-users-list-creation',
   templateUrl: './users-list&creation.component.html',
-
   styleUrls: ['./users-list&creation.component.scss'],
   standalone: true,
   imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
     MatTableModule,
+    MatPaginatorModule,
+    MatSortModule,
     MatButtonModule,
     MatIconModule,
-    CreateUserDialogComponent,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatDialogModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
+    MatTooltipModule,
+    UserDialogComponent,
     TopBarComponent,
     NavbarComponent,
+    ConfirmDialogComponent,
+    UserDetailsDialogComponent,
   ],
 })
 export class UsersListCreationComponent implements OnInit {
   users: User[] = [];
+  filteredUsers: User[] = [];
+  searchTerm = '';
   displayedColumns: string[] = [
+    'id',
     'name',
+    'lastName',
     'email',
-    'phone',
     'country',
-    'password',
     'role',
-    'active',
-    'contract',
+    'status',
     'actions',
+    'details',
   ];
+  isLoading = true;
+  countries: any[] = [];
+  roles: any[] = [];
+  companies: any[] = [];
+  projects: any[] = [];
+  newUser: User = {
+    name: '',
+    email: '',
+    role: { id: 1, name: 'USER' },
+  };
+  errorMessage = '';
 
-  constructor(private userService: UserService, private dialog: MatDialog) {}
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  @ViewChild(MatSort) sort!: MatSort;
+
+  constructor(
+    private userService: UserService,
+    private countryService: CountryService,
+    private roleService: RoleService,
+    private companyService: CompanyService,
+    private projectService: ProjectService,
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar
+  ) {}
 
   ngOnInit(): void {
     this.loadUsers();
+    this.loadCountries();
+    this.loadRoles();
+    this.loadCompanies();
+    this.loadProjects();
   }
 
-  loadUsers() {
+  loadUsers(): void {
+    this.isLoading = true;
     this.userService.getUsers().subscribe({
-      next: (users) => {
-        this.users = users;
+      next: (data: User[]) => {
+        this.users = data;
+        this.filteredUsers = [...this.users];
+        this.isLoading = false;
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('Error loading users:', error);
+        this.isLoading = false;
+        this.showNotification(
+          'Error loading users. Please try again.',
+          'error'
+        );
       },
     });
   }
 
-  openCreateUserDialog() {
-    const dialogRef = this.dialog.open(CreateUserDialogComponent, {
-      width: '500px',
+  loadCountries(): void {
+    this.countryService.getCountries().subscribe({
+      next: (data) => {
+        this.countries = data;
+      },
+      error: (error) => {
+        console.error('Error loading countries:', error);
+      },
+    });
+  }
+
+  loadRoles(): void {
+    this.roleService.getRoles().subscribe({
+      next: (data) => {
+        this.roles = data;
+      },
+      error: (error) => {
+        console.error('Error loading roles:', error);
+      },
+    });
+  }
+
+  loadCompanies(): void {
+    this.companyService.getCompanies().subscribe({
+      next: (data) => {
+        this.companies = data;
+      },
+      error: (error) => {
+        console.error('Error loading companies:', error);
+      },
+    });
+  }
+
+  loadProjects(): void {
+    this.projectService.getProjects().subscribe({
+      next: (data) => {
+        this.projects = data;
+      },
+      error: (error) => {
+        console.error('Error loading projects:', error);
+      },
+    });
+  }
+
+  filterUsers(): void {
+    if (!this.searchTerm) {
+      this.filteredUsers = [...this.users];
+      return;
+    }
+
+    const term = this.searchTerm.toLowerCase();
+    this.filteredUsers = this.users.filter(
+      (user) =>
+        user.name?.toLowerCase().includes(term) ||
+        user.lastName?.toLowerCase().includes(term) ||
+        user.email?.toLowerCase().includes(term) ||
+        user.country?.name?.toLowerCase().includes(term) ||
+        (user.role?.name &&
+          user.role.name.toLowerCase().includes(term.toLowerCase()))
+    );
+  }
+
+  openCreateDialog(): void {
+    const dialogRef = this.dialog.open(UserDialogComponent, {
+      width: '600px',
+      data: { isEdit: false },
+      panelClass: 'modern-dialog',
     });
 
     dialogRef.afterClosed().subscribe((result) => {
       if (result) {
-        this.loadUsers();
+        this.userService.createUser(result).subscribe({
+          next: (newUser: User) => {
+            this.users.push(newUser);
+            this.filterUsers();
+            this.showNotification('User created successfully!', 'success');
+          },
+          error: (error: any) => {
+            console.error('Error creating user:', error);
+            this.showNotification(
+              'Error creating user. Please try again.',
+              'error'
+            );
+          },
+        });
+      }
+    });
+  }
+  openDetailsDialog(userId: number): void {
+    const user = this.users.find((u) => u.id === userId);
+    if (user) {
+      const dialogRef = this.dialog.open(UserDetailsDialogComponent, {
+        width: '600px',
+        data: { user },
+        panelClass: 'modern-dialog',
+      });
+
+      dialogRef.afterClosed().subscribe((result) => {
+        // Optional: Add any cleanup or actions after dialog closes
+      });
+    }
+  }
+
+  openEditDialog(userId: number): void {
+    const user = this.users.find((u) => u.id === userId);
+    if (!user) return;
+
+    const dialogRef = this.dialog.open(EditUserDialogComponent, {
+      width: '600px',
+      data: {
+        user,
+        countries: this.countries,
+        roles: this.roles,
+        companies: this.companies,
+        projects: this.projects,
+      },
+      panelClass: 'modern-dialog',
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result && result.id) {
+        this.userService.updateUser(result.id, result).subscribe({
+          next: (updatedUser) => {
+            if (!updatedUser) {
+              console.error('Updated user is null');
+              this.showNotification(
+                'Error updating user. Please try again.',
+                'error'
+              );
+              return;
+            }
+
+            // Refresh the entire user list to ensure synchronization
+            this.loadUsers();
+            this.showNotification('User updated successfully!', 'success');
+          },
+          error: (error) => {
+            console.error('Error updating user:', error);
+            this.showNotification(
+              'Error updating user. Please try again.',
+              'error'
+            );
+          },
+        });
+      }
+    });
+  }
+  confirmDelete(user: User): void {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Confirm Deletion',
+        message: `Are you sure you want to delete ${user.name} ${user.lastName}?`,
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+      },
+      panelClass: 'confirm-dialog',
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result && user.id) {
+        this.deleteUser(user.id);
       }
     });
   }
 
-  deleteUser(user: User) {
-    if (!user.id) return;
+  deleteUser(userId: number): void {
+    this.userService.deleteUser(userId).subscribe({
+      next: () => {
+        this.users = this.users.filter((user) => user.id !== userId);
+        this.filterUsers();
+        this.showNotification('User deleted successfully!', 'success');
+      },
+      error: (error) => {
+        console.error('Error deleting user:', error);
+        this.showNotification(
+          'Error deleting user. Please try again.',
+          'error'
+        );
+      },
+    });
+  }
 
-    if (confirm(`Are you sure you want to delete ${user.name}?`)) {
-      this.userService.deleteUser(user.id).subscribe({
-        next: () => {
-          this.users = this.users.filter((u) => u.id !== user.id);
-        },
-        error: (error) => {
-          console.error('Error deleting user:', error);
-        },
-      });
-    }
+  showNotification(message: string, type: 'success' | 'error'): void {
+    this.snackBar.open(message, 'Close', {
+      duration: 4000,
+      horizontalPosition: 'end',
+      verticalPosition: 'top',
+      panelClass: type === 'success' ? 'success-snackbar' : 'error-snackbar',
+    });
   }
 }

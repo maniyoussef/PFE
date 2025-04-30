@@ -1,47 +1,171 @@
 <!-- tickets.component.html -->
-<div class="ticket-container">
-  <!-- Top Bar -->
-  <app-top-bar></app-top-bar>
+<div class="tickets-container">
+  <div class="particle-background"></div>
 
-  <!-- Sidebar Navigation -->
-  <app-navbar></app-navbar>
-
-  <!-- Main Content Area -->
-  <main class="ticket-main-content">
-    <div class="tickets-container">
-      <h2 class="tickets-title">Tickets</h2>
-
-      <!-- Loading Indicator -->
-      <div class="spinner-container" *ngIf="isLoading">
-        <mat-spinner diameter="50"></mat-spinner>
-      </div>
-
-      <div class="tickets-grid" *ngIf="!isLoading">
-        <mat-card *ngFor="let ticket of tickets" class="ticket-card">
-          <mat-card-content>
-            <div class="ticket-header">
-              <h3>{{ ticket.title }}</h3>
-              <mat-chip-set>
-                <mat-chip
-                  [style.background-color]="getPriorityColor(ticket.priority)"
-                >
-                  {{ ticket.priority }}
-                </mat-chip>
-              </mat-chip-set>
-            </div>
-
-            <div class="ticket-details">
-              <p><strong>Qualification:</strong> {{ ticket.qualification }}</p>
-              <p><strong>Projet:</strong> {{ ticket.projectName }}</p>
-              <p><strong>Catégorie:</strong> {{ ticket.categoryName }}</p>
-            </div>
-
-            <div class="ticket-description">
-              <p>{{ ticket.description }}</p>
-            </div>
-          </mat-card-content>
-        </mat-card>
+  <div class="content-wrapper">
+    <div class="header-section">
+      <h1 class="page-title">Gestion des Tickets</h1>
+      <div class="header-actions">
+        <div class="search-sort-container">
+          <div class="sort-container">
+            <label for="sort-select">Trier par :</label>
+            <select id="sort-select" (change)="applySort($event)">
+              <option value="newest">Plus récents en premier</option>
+              <option value="oldest">Plus anciens en premier</option>
+              <option value="status">Statut</option>
+              <option value="title">Titre</option>
+              <option value="priority">Priorité</option>
+            </select>
+          </div>
+        </div>
+        <button class="export-button" (click)="openExportDialog()">
+          <span class="button-icon">
+            <mat-icon>file_download</mat-icon>
+          </span>
+          <span class="button-text">Exporter Excel</span>
+        </button>
       </div>
     </div>
-  </main>
+
+    <!-- Loading Indicator -->
+    <div class="loading-container" *ngIf="isLoading">
+      <div class="loading-spinner">
+        <mat-spinner diameter="50"></mat-spinner>
+      </div>
+    </div>
+
+    <!-- No tickets state -->
+    <div *ngIf="!isLoading && tickets.length === 0" class="empty-state">
+      <mat-icon>inbox</mat-icon>
+      <p>Aucun ticket trouvé</p>
+    </div>
+
+    <!-- Tickets Table -->
+    <div *ngIf="!isLoading && tickets.length > 0" class="ticket-list-container">
+      <table class="ticket-table">
+        <thead>
+          <tr>
+            <th>Titre</th>
+            <th>Qualification</th>
+            <th>Priorité</th>
+            <th>Projet</th>
+            <th>Catégorie du problème</th>
+            <th>Status</th>
+            <th>Assigné à</th>
+            <th>Date de création</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let ticket of tickets"
+            [class.row-highlighted]="selectedTicket === ticket"
+          >
+            <td>{{ ticket.title }}</td>
+            <td>{{ ticket.qualification }}</td>
+            <td>
+              <div
+                class="priority-badge"
+                [class.priority-high]="ticket.priority === 'Haute'"
+                [class.priority-medium]="ticket.priority === 'Moyenne'"
+                [class.priority-low]="ticket.priority === 'Basse'"
+              >
+                {{ ticket.priority }}
+              </div>
+            </td>
+            <td>{{ ticket.project?.name || "Non spécifié" }}</td>
+            <td>{{ ticket.problemCategory?.name || "Non spécifié" }}</td>
+            <td>
+              <div
+                class="status-badge"
+                [style.backgroundColor]="getStatusColor(ticket.status)"
+              >
+                {{ ticket.status || "Statut non spécifié" }}
+              </div>
+            </td>
+            <td>
+              {{
+                ticket.assignedTo
+                  ? ticket.assignedTo.name + " " + ticket.assignedTo.lastName
+                  : "Non assigné"
+              }}
+            </td>
+            <td>{{ formatCreatedDate(ticket.createdAt) }}</td>
+            <td class="actions-cell">
+              <!-- Using Angular Material's matMenu which handles all the positioning and event issues -->
+              <div class="menu-container">
+                <button
+                  mat-icon-button
+                  [matMenuTriggerFor]="actionMenu"
+                  aria-label="Actions menu"
+                  class="menu-trigger debug-trigger"
+                >
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+
+                <!-- Material menu handles all the event binding and positioning -->
+                <mat-menu #actionMenu="matMenu" class="action-menu">
+                  <!-- Description button - always visible -->
+                  <button
+                    mat-menu-item
+                    class="dropdown-item debug-description-btn"
+                    (click)="handleDescriptionClick(ticket, $event)"
+                  >
+                    <mat-icon>description</mat-icon>
+                    <span>Description</span>
+                  </button>
+
+                  <!-- Comment button - always visible -->
+                  <button
+                    mat-menu-item
+                    class="dropdown-item debug-comment-btn"
+                    (click)="handleCommentClick(ticket, $event)"
+                  >
+                    <mat-icon>comment</mat-icon>
+                    <span>Commentaires</span>
+                  </button>
+
+                  <!-- Assign button - only after ticket has been accepted -->
+                  <button
+                    mat-menu-item
+                    class="dropdown-item debug-assign-btn"
+                    *ngIf="
+                      ticket.status === 'ACCEPTED' ||
+                      ticket.status === 'Accepté'
+                    "
+                    (click)="handleAssignClick(ticket, $event)"
+                  >
+                    <mat-icon>person_add</mat-icon>
+                    <span>Assigner</span>
+                  </button>
+
+                  <!-- Accept button (only for Open tickets) -->
+                  <button
+                    mat-menu-item
+                    class="dropdown-item debug-accept-btn"
+                    *ngIf="ticket.status === 'OPEN' || ticket.status === 'Open'"
+                    (click)="handleAcceptClick(ticket, $event)"
+                  >
+                    <mat-icon>check_circle</mat-icon>
+                    <span>Accepter</span>
+                  </button>
+
+                  <!-- Refuse button (only for Open tickets) -->
+                  <button
+                    mat-menu-item
+                    class="dropdown-item debug-refuse-btn"
+                    *ngIf="ticket.status === 'OPEN' || ticket.status === 'Open'"
+                    (click)="handleRefuseClick(ticket, $event)"
+                  >
+                    <mat-icon>cancel</mat-icon>
+                    <span>Refuser</span>
+                  </button>
+                </mat-menu>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>

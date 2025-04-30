@@ -1,0 +1,75 @@
+<!-- historique-tickets.component.html -->
+<div class="historique-container">
+  
+  <div class="header">
+    <h2 class="historique-title">Historique des Tickets Résolus</h2>
+  </div>
+
+  <!-- Loading Indicator -->
+  <div class="loading" *ngIf="isLoading">
+    <mat-spinner diameter="50"></mat-spinner>
+  </div>
+
+  <div
+    *ngIf="!isLoading && resolvedTickets.length === 0"
+    class="no-tickets"
+  >
+    <p>Aucun ticket résolu pour le moment</p>
+  </div>
+
+  <!-- Tickets Table -->
+  <div *ngIf="!isLoading && resolvedTickets.length > 0" class="tickets-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Titre</th>
+          <th>Qualification</th>
+          <th>Priorité</th>
+          <th>Projet</th>
+          <th>Catégorie du problème</th>
+          <th>Status</th>
+          <th>Assigné à</th>
+          <th>Date de résolution</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let ticket of resolvedTickets">
+          <td>{{ ticket.title }}</td>
+          <td>{{ ticket.qualification }}</td>
+          <td
+            [class.priority-high]="ticket.priority === 'Haute'"
+            [class.priority-medium]="ticket.priority === 'Moyenne'"
+            [class.priority-low]="ticket.priority === 'Basse'"
+          >
+            {{ ticket.priority }}
+          </td>
+          <td>{{ ticket.project?.name || "Non spécifié" }}</td>
+          <td>{{ ticket.problemCategory?.name || "Non spécifié" }}</td>
+          <td>
+            <mat-chip [style.backgroundColor]="'#5cb85c'">
+              Résolu
+            </mat-chip>
+          </td>
+          <td>
+            {{
+              ticket.assignedTo
+                ? ticket.assignedTo.name + " " + ticket.assignedTo.lastName
+                : "Non assigné"
+            }}
+          </td>
+          <td>{{ formatDate(ticket.updatedAt) }}</td>
+          <td>
+            <button 
+              mat-mini-fab 
+              class="action-button description-button"
+              matTooltip="Voir la description"
+              (click)="showDescription(ticket)">
+              <mat-icon>description</mat-icon>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
