@@ -8,6 +8,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatGridListModule } from '@angular/material/grid-list';
 
+// Import the AdminReportsComponent directly from its new location
+import { AdminReportsComponent } from '../AdminReportsComponent';
+
 @Component({
   selector: 'app-admin-dashboard',
   templateUrl: './AdminDashboard.component.html',
@@ -61,11 +64,11 @@ export class AdminDashboardComponent implements OnInit {
       color: 'primary',
     },
     {
-      title: 'Débogage',
-      icon: 'bug_report',
-      route: '/admin/client-assignments-debugger',
-      buttonText: 'Debugger les Assignations',
-      color: 'warn',
+      title: 'Rapports',
+      icon: 'assessment',
+      route: '/admin/rapports',
+      buttonText: 'Voir les Rapports',
+      color: 'primary',
     },
   ];
 

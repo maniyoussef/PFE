@@ -1,10 +1,13 @@
 // chef-projet-dashboard.component.ts
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+
+// Material Modules
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatButtonModule } from '@angular/material/button';
+import { MatGridListModule } from '@angular/material/grid-list';
 
 @Component({
   selector: 'app-chef-projet-dashboard',
@@ -14,21 +17,53 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
     RouterModule,
     MatCardModule,
     MatIconModule,
-    MatProgressBarModule,
+    MatButtonModule,
+    MatGridListModule,
   ],
   templateUrl: './chef-projet-dashboard.component.html',
   styleUrls: ['./chef-projet-dashboard.component.scss'],
 })
-export class ChefProjetDashboardComponent {
-  // Data for dashboard metrics - renamed from stats to match the template
-  stats = [
-    { title: 'Projets', icon: 'work', value: 8 },
-    { title: 'Tickets', icon: 'confirmation_number', value: 42 },
-    { title: 'Rapports', icon: 'description', value: 24 },
-    { title: 'Utilisateurs', icon: 'group', value: 15 },
+export class ChefProjetDashboardComponent implements OnInit {
+  title = 'Tableau de Bord Chef de Projet';
+  dashboardCards = [
+    {
+      title: 'Projets',
+      icon: 'folder',
+      route: '/chef-projet/projects',
+      buttonText: 'Gérer mes Projets',
+      color: 'primary',
+    },
+    {
+      title: 'Tickets',
+      icon: 'confirmation_number',
+      route: '/chef-projet/tickets',
+      buttonText: 'Gérer mes Tickets',
+      color: 'primary',
+    },
+    {
+      title: 'Équipe',
+      icon: 'people',
+      route: '/chef-projet/equipe',
+      buttonText: 'Gérer mon Équipe',
+      color: 'primary',
+    },
+    {
+      title: 'Rapports',
+      icon: 'description',
+      route: '/chef-projet/reports',
+      buttonText: 'Consulter les Rapports',
+      color: 'primary',
+    },
   ];
 
   constructor() {
-    console.log('ChefProjetDashboardComponent initialized');
+    console.log('[ChefProjetDashboard] Component constructed');
+  }
+
+  ngOnInit() {
+    console.log('[ChefProjetDashboard] Component initialized', {
+      cardCount: this.dashboardCards.length,
+      timestamp: new Date().toISOString(),
+    });
   }
 }

@@ -6,6 +6,9 @@ import {
   ElementRef,
   ViewChildren,
   QueryList,
+  AfterViewInit,
+  ViewChild,
+  Renderer2
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
@@ -67,19 +70,22 @@ import { Router } from '@angular/router';
     ]),
     trigger('rotate', [
       state('default', style({ transform: 'rotate(0)' })),
-      state('rotated', style({ transform: 'rotate(360deg)' })),
-      transition('default <=> rotated', animate('1s ease-in-out')),
+      state('rotated', style({ transform: 'rotate(180deg)' })),
+      transition('default <=> rotated', animate('300ms ease-in-out')),
     ]),
     trigger('expandCollapse', [
       state('collapsed', style({ height: '0px', opacity: 0 })),
       state('expanded', style({ height: '*', opacity: 1 })),
-      transition('collapsed <=> expanded', animate('300ms ease-in-out')),
+      transition('collapsed <=> expanded', animate('300ms cubic-bezier(0.4, 0.0, 0.2, 1)')),
     ]),
   ],
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, AfterViewInit {
   @ViewChildren('productCard', { read: ElementRef })
   productCards!: QueryList<ElementRef>;
+
+  @ViewChildren('.counter')
+  counters!: QueryList<ElementRef>;
 
   mouseX = 0;
   mouseY = 0;
@@ -87,6 +93,9 @@ export class HomeComponent implements OnInit {
   expandedProductIndex: number | null = null;
   isHeroVisible = true;
   scrollProgress = 0;
+  currentYear = new Date().getFullYear();
+  isAboutSectionVisible = false;
+  hasAnimatedCounters = false;
 
   products = [
     {
@@ -150,7 +159,7 @@ export class HomeComponent implements OnInit {
     },
   ];
 
-  constructor(private router: Router, public auth: AuthService) {}
+  constructor(private router: Router, public auth: AuthService, private renderer: Renderer2) {}
 
   @HostListener('window:scroll', [])
   onWindowScroll() {
@@ -164,44 +173,33 @@ export class HomeComponent implements OnInit {
       document.documentElement.clientHeight;
     this.scrollProgress = (scrollTop / height) * 100;
     this.isHeroVisible = scrollTop < 300;
+    
+    // Check if about section is in view for counter animation
+    const aboutSection = document.querySelector('.about-section');
+    if (aboutSection) {
+      const rect = aboutSection.getBoundingClientRect();
+      const isVisible = rect.top < window.innerHeight && rect.bottom >= 0;
+      
+      if (isVisible && !this.hasAnimatedCounters) {
+        this.animateCounters();
+        this.hasAnimatedCounters = true;
+      }
+    }
   }
 
   @HostListener('mousemove', ['$event'])
   onMouseMove(event: MouseEvent) {
     this.mouseX = event.clientX;
     this.mouseY = event.clientY;
-    this.updateCardTilt(event);
-  }
-
-  updateCardTilt(event: MouseEvent) {
-    this.productCards.forEach((card) => {
-      const rect = card.nativeElement.getBoundingClientRect();
-      const cardCenterX = rect.left + rect.width / 2;
-      const cardCenterY = rect.top + rect.height / 2;
-
-      const angleX = (cardCenterY - event.clientY) / 30;
-      const angleY = (event.clientX - cardCenterX) / 30;
-
-      card.nativeElement.style.transform = `perspective(1000px) rotateX(${angleX}deg) rotateY(${angleY}deg)`;
-    });
-  }
-
-  resetCardTilt(index: number) {
-    const card = this.productCards.toArray()[index];
-    if (card) {
-      card.nativeElement.style.transform =
-        'perspective(1000px) rotateX(0deg) rotateY(0deg)';
-    }
-  }
-
-  toggleRotation() {
-    this.rotationState =
-      this.rotationState === 'default' ? 'rotated' : 'default';
   }
 
   toggleProductExpansion(index: number) {
-    this.expandedProductIndex =
-      this.expandedProductIndex === index ? null : index;
+    // Close the currently expanded card if clicking on a different one
+    if (this.expandedProductIndex === index) {
+      this.expandedProductIndex = null;
+    } else {
+      this.expandedProductIndex = index;
+    }
   }
 
   login(): void {
@@ -209,4 +207,49 @@ export class HomeComponent implements OnInit {
   }
 
   ngOnInit(): void {}
+  
+  ngAfterViewInit(): void {
+    // Initialize counter animation when in view
+    this.checkAboutSectionVisibility();
+  }
+  
+  checkAboutSectionVisibility(): void {
+    const aboutSection = document.querySelector('.about-section');
+    if (aboutSection) {
+      const rect = aboutSection.getBoundingClientRect();
+      this.isAboutSectionVisible = rect.top < window.innerHeight && rect.bottom >= 0;
+      
+      if (this.isAboutSectionVisible && !this.hasAnimatedCounters) {
+        setTimeout(() => {
+          this.animateCounters();
+        }, 500);
+        this.hasAnimatedCounters = true;
+      }
+    }
+  }
+  
+  animateCounters(): void {
+    const counters = document.querySelectorAll('.counter');
+    
+    counters.forEach(counter => {
+      const target = parseInt(counter.getAttribute('data-target') || '0');
+      let count = 0;
+      const duration = 2000; // ms
+      const frameRate = 30; // ms
+      const increment = Math.ceil(target / (duration / frameRate));
+      
+      const updateCount = () => {
+        if (count < target) {
+          count += increment;
+          if (count > target) count = target;
+          counter.textContent = count.toString();
+          setTimeout(updateCount, frameRate);
+        } else {
+          counter.textContent = target.toString();
+        }
+      };
+      
+      updateCount();
+    });
+  }
 }

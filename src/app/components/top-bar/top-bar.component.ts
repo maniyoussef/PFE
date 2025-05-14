@@ -30,31 +30,34 @@ import { MatIconModule } from '@angular/material/icon';
   `,
   styles: [`
     .top-bar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: var(--header-height);
+      position: relative;
+      height: 40px;
+      min-height: 40px;
+      max-height: 40px;
       background-color: var(--background-primary);
       border-bottom: 1px solid var(--border-color);
-      z-index: 1000;
+      z-index: 2;
       transition: all 0.3s ease;
+      padding: 0;
+      margin: 0;
     }
 
     .top-bar-content {
       width: 100%;
       max-width: 1200px;
       margin: 0 auto;
-      padding: 0 2rem;
+      padding: 0;
       display: flex;
-      justify-content: flex-end;
+      justify-content: center;
       align-items: center;
+      height: 100%;
     }
 
     .top-bar-links {
       display: flex;
       gap: 1.5rem;
       align-items: center;
+      height: 100%;
     }
 
     .top-link {
@@ -65,14 +68,15 @@ import { MatIconModule } from '@angular/material/icon';
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      padding: 0.5rem;
+      padding: 0 0.5rem;
       border-radius: 4px;
       transition: all 0.2s ease;
+      height: 100%;
 
       mat-icon {
-        font-size: 18px;
-        height: 18px;
-        width: 18px;
+        font-size: 16px;
+        height: 16px;
+        width: 16px;
       }
 
       &:hover {
@@ -82,8 +86,14 @@ import { MatIconModule } from '@angular/material/icon';
     }
 
     @media (max-width: 768px) {
+      .top-bar {
+        height: 30px;
+        min-height: 30px;
+        max-height: 30px;
+      }
+
       .top-bar-content {
-        padding: 0 1rem;
+        padding: 0;
       }
 
       .top-bar-links {

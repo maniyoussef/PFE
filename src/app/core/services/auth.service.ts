@@ -6,6 +6,7 @@ import { catchError, tap, map } from 'rxjs/operators';
 import { User, AuthResponse } from '../models/user.model';
 import { UserRole, ROLE_ROUTES } from '../constants/roles';
 import { environment } from '../../../environments/environment';
+import { NotificationService } from '../../services/notification.service';
 
 @Injectable({
   providedIn: 'root',
@@ -13,6 +14,7 @@ import { environment } from '../../../environments/environment';
 export class AuthService {
   private apiUrl = `${environment.apiUrl}/auth`;
   private tokenExpirationTimer: any;
+  private navigationTimer: any;
 
   // Modern state management using signals
   private readonly userSignal = signal<User | null>(null);
@@ -27,7 +29,7 @@ export class AuthService {
 
     // If no user in memory, try to get from localStorage
     if (!user) {
-      const userData = localStorage.getItem('userData');
+      const userData = localStorage.getItem('userData') || localStorage.getItem('user');
       if (userData) {
         try {
           user = JSON.parse(userData);
@@ -43,17 +45,28 @@ export class AuthService {
     const token = localStorage.getItem('token');
     const expiration = localStorage.getItem('tokenExpiration');
 
-    console.log('[AuthService] 🔑 Checking login status:', {
-      hasUser: !!user,
+    console.log('[AuthService] 🔍 Checking login state:', {
       hasToken: !!token,
-      hasExpiration: !!expiration,
-      expiration: expiration ? new Date(expiration).toISOString() : null,
-      now: new Date().toISOString(),
+      hasUser: !!user,
+      hasRefreshToken: !!localStorage.getItem('refreshToken'),
+      tokenExpiration: expiration ? new Date(expiration) : null,
+      currentTime: new Date(),
       isExpired: expiration ? new Date(expiration) <= new Date() : true,
+      userId: user?.id,
+      userRoles: user?.roles
     });
 
-    if (!user || !token || !expiration) {
-      console.log('[AuthService] 🔒 Not logged in - missing data');
+    if (!token || !expiration) {
+      console.log('[AuthService] 🔒 Not logged in - missing token or expiration');
+      return false;
+    }
+
+    if (!user) {
+      console.log('[AuthService] ❌ Login check failed:', {
+        missingToken: !token,
+        missingExpiration: !expiration,
+        missingUser: !user
+      });
       return false;
     }
 
@@ -114,7 +127,11 @@ export class AuthService {
   readonly isLoading = computed(() => this.loadingSignal());
   readonly error = computed(() => this.errorSignal());
 
-  constructor(private http: HttpClient, private router: Router) {
+  constructor(
+    private router: Router,
+    private http: HttpClient,
+    private notificationService: NotificationService
+  ) {
     console.log('[AuthService] Service initialized');
     this.initializeAuth();
   }
@@ -269,88 +286,26 @@ export class AuthService {
       // Set auto logout
       this.autoLogout(expiresIn * 1000);
 
-      // CRITICAL FIX: Direct check for Chef Projet roles in any format
-      if (
-        Array.isArray(user.roles) &&
-        user.roles.some(
-          (role) =>
-            typeof role === 'string' &&
-            (role === 'Chef Projet' || role.toUpperCase() === 'CHEF PROJET')
-        )
-      ) {
-        console.log(
-          '[AuthService] 🎯 CRITICAL FIX: Chef Projet found in roles array'
-        );
-        setTimeout(() => {
-          this.router.navigate(['/chef-projet'], { replaceUrl: true });
-        }, 100);
-        return;
-      }
-
-      // Navigate to appropriate route based on role
-      const roleFromBackend = user.roles?.[0]?.toUpperCase();
-      console.log('[AuthService] 🎯 User role from backend:', roleFromBackend);
-
-      if (!roleFromBackend) {
-        console.error('[AuthService] ❌ No role found in user data');
-        return;
-      }
-
-      if (roleFromBackend === 'CHEF PROJET') {
-        console.log(
-          '[AuthService] 🔒 CRITICAL FIX: Detected CHEF PROJET role format'
-        );
-        this.router.navigate(['/chef-projet'], { replaceUrl: true });
-        return;
-      }
-
-      // Use a small delay to ensure state is updated before navigation
+      // Add delay to ensure storage is updated before trying to migrate notifications
       setTimeout(() => {
-        let targetRoute: string;
-        switch (roleFromBackend) {
-          case 'ADMIN':
-            targetRoute = '/admin/dashboard';
-            break;
-          case 'USER':
-            targetRoute = '/user/dashboard';
-            break;
-          case 'CLIENT':
-            targetRoute = '/client/dashboard';
-            break;
-          case 'CHEF_PROJET':
-            targetRoute = '/chef-projet/dashboard';
-            break;
-          case 'COLLABORATEUR':
-            // Navigate directly to the collaborateur route instead of using the redirect
-            targetRoute = '/collaborateur';
-            console.log(
-              '[AuthService] 🔧 Navigating directly to collaborateur dashboard'
-            );
-            break;
-          default:
-            console.error(
-              '[AuthService] ❌ Unknown role format:',
-              roleFromBackend
-            );
-            targetRoute = '/login';
+        // Force store userId in a more reliable way
+        const userId = this.user() ? this.user()?.id : response.user?.id;
+        if (userId) {
+          console.log(`[AuthService] Ensuring userId ${userId} is in localStorage before notification migration`);
+          localStorage.setItem('userId', userId.toString());
+          
+          // Now migrate notifications with guaranteed userId
+          console.log('[AuthService] Migrating global notifications after login with delay');
+          this.notificationService.migrateGlobalNotifications();
+          
+          // Force refresh notifications from storage
+          this.notificationService.refreshFromStorage();
+          this.notificationService.forceWriteNotificationsToStorage();
         }
+      }, 1000);
 
-        console.log(`[AuthService] 🚀 Navigating to: ${targetRoute}`);
-        this.router
-          .navigateByUrl(targetRoute, { replaceUrl: true })
-          .then((success) => {
-            if (!success) {
-              console.error(
-                `[AuthService] ❌ Navigation to ${targetRoute} failed`
-              );
-              this.router.navigate(['/login']);
-            }
-          })
-          .catch((error) => {
-            console.error('[AuthService] ❌ Navigation error:', error);
-            this.router.navigate(['/login']);
-          });
-      }, 100);
+      // SINGLE NAVIGATION PATH - Use a clean approach with delay for admin only
+      this.navigateAfterLogin();
     } catch (error) {
       console.error('[AuthService] Error in authentication handling:', error);
       this.errorSignal.set('Authentication error');
@@ -416,6 +371,69 @@ export class AuthService {
         catchError((error) => {
           console.error('[AuthService] ❌ Token refresh failed', error);
           this.logout();
+          return throwError(() => error);
+        })
+      );
+  }
+
+  changePassword(oldPassword: string, newPassword: string): Observable<any> {
+    return this.http
+      .post(`${this.apiUrl}/change-password`, { oldPassword, newPassword })
+      .pipe(
+        catchError((error) => {
+          console.error('[AuthService] Password change error:', error);
+          
+          // Handle 401 errors specifically for password change
+          if (error.status === 401) {
+            return throwError(() => new Error("Le mot de passe actuel est incorrect"));
+          }
+          
+          return throwError(() => error);
+        })
+      );
+  }
+
+  // Method to request a password reset
+  requestPasswordReset(email: string): Observable<any> {
+    this.loadingSignal.set(true);
+    this.errorSignal.set(null);
+    
+    return this.http
+      .post(`${this.apiUrl}/forgot-password`, { email })
+      .pipe(
+        tap((response) => {
+          console.log('[AuthService] Password reset requested successfully');
+          this.loadingSignal.set(false);
+        }),
+        catchError((error) => {
+          console.error('[AuthService] Password reset request error:', error);
+          this.loadingSignal.set(false);
+          this.errorSignal.set(
+            error.error?.message || 'Une erreur est survenue lors de la demande de réinitialisation'
+          );
+          return throwError(() => error);
+        })
+      );
+  }
+  
+  // Method to reset password with token
+  resetPassword(email: string, token: string, newPassword: string): Observable<any> {
+    this.loadingSignal.set(true);
+    this.errorSignal.set(null);
+    
+    return this.http
+      .post(`${this.apiUrl}/reset-password`, { email, token, newPassword })
+      .pipe(
+        tap((response) => {
+          console.log('[AuthService] Password reset successful');
+          this.loadingSignal.set(false);
+        }),
+        catchError((error) => {
+          console.error('[AuthService] Password reset error:', error);
+          this.loadingSignal.set(false);
+          this.errorSignal.set(
+            error.error?.message || 'Une erreur est survenue lors de la réinitialisation du mot de passe'
+          );
           return throwError(() => error);
         })
       );
@@ -487,20 +505,38 @@ export class AuthService {
     // This ensures the user data is available in memory immediately
     this.userSignal.set(user);
 
-    // Store in both keys for cross-service compatibility
-    localStorage.setItem('userData', userData);
-    localStorage.setItem('user', userData);
-    localStorage.setItem('token', token);
-    if (refreshToken) {
-      localStorage.setItem('refreshToken', refreshToken);
+    try {
+      // Store in both keys for cross-service compatibility
+      localStorage.setItem('userData', userData);
+      localStorage.setItem('user', userData);
+      localStorage.setItem('token', token);
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+      }
+      localStorage.setItem('tokenExpiration', expirationDate.toISOString());
+
+      // Store userId and userRole for notifications
+      if (user.id) {
+        localStorage.setItem('userId', user.id.toString());
+      }
+      if (user.roles && user.roles.length > 0) {
+        // Use the first role for notifications
+        const role = user.roles[0];
+        // Handle both string and object role formats
+        const roleName = typeof role === 'string' ? role : (role as { name: string }).name;
+        localStorage.setItem('userRole', roleName);
+      }
+    } catch (err) {
+      console.error('[AuthService] 🔴 Error storing auth data:', err);
     }
-    localStorage.setItem('tokenExpiration', expirationDate.toISOString());
 
     // Verify storage
     const storedData = localStorage.getItem('userData');
     const storedUser = localStorage.getItem('user');
     const storedToken = localStorage.getItem('token');
     const storedExpiration = localStorage.getItem('tokenExpiration');
+    const storedUserId = localStorage.getItem('userId');
+    const storedUserRole = localStorage.getItem('userRole');
 
     console.log('[AuthService] ✅ Storage verification:', {
       userDataStored: !!storedData,
@@ -509,6 +545,110 @@ export class AuthService {
       tokenStored: !!storedToken,
       tokenLength: storedToken ? storedToken.length : 0,
       expirationStored: !!storedExpiration,
+      userIdStored: !!storedUserId,
+      userRoleStored: !!storedUserRole,
+      userId: storedUserId,
+      userRole: storedUserRole
     });
+  }
+
+  private navigateAfterLogin(): void {
+    // Get the user's role - this is a computed value based on user data
+    const userRole = this.userRole();
+    console.log('[AuthService] 🚀 Preparing navigation after login for role:', userRole);
+
+    if (!userRole) {
+      console.warn('[AuthService] Cannot navigate - no user role found');
+      return;
+    }
+
+    // For extra safety, clear any existing navigation timer
+    if (this.navigationTimer) {
+      clearTimeout(this.navigationTimer);
+      this.navigationTimer = null;
+    }
+
+    let targetRoute = '/';
+    
+    // Determine the correct route based on role
+    switch (userRole) {
+      case 'ADMIN':
+        // For admin, always navigate directly to dashboard to avoid component resolution issues
+        targetRoute = '/admin/dashboard';
+        break;
+      case 'USER':
+      case 'CLIENT':
+        targetRoute = '/user/dashboard';
+        break;
+      case 'CHEF PROJET':
+      case 'CHEF_PROJET':
+        targetRoute = '/chef-projet';
+        break;
+      case 'COLLABORATEUR':
+        targetRoute = '/collaborateur';
+        break;
+      default:
+        console.warn(`[AuthService] Unknown role: ${userRole}, using default route`);
+    }
+    
+    console.log(`[AuthService] Will navigate to: ${targetRoute}`);
+    
+    // Use a shorter delay for ADMIN users to avoid timing issues with component resolution
+    const delay = userRole === 'ADMIN' ? 100 : 1000;
+    
+    // Schedule navigation after delay - with safe handler to prevent errors
+    this.navigationTimer = setTimeout(() => {
+      console.log(`[AuthService] 🚀 Now navigating to: ${targetRoute}`);
+      
+      // Verify login state just before navigation
+      if (this.isLoggedIn()) {
+        try {
+          // For ADMIN users, force a direct navigation with no query params and replace URL
+          if (userRole === 'ADMIN') {
+            this.router.navigate([targetRoute], { 
+              replaceUrl: true, 
+              queryParams: {}, 
+              queryParamsHandling: '' 
+            })
+            .then(success => {
+              if (!success) {
+                console.error(`[AuthService] ❌ Admin navigation to ${targetRoute} failed, trying fallback`);
+                // Try alternative navigation as fallback
+                setTimeout(() => {
+                  this.router.navigateByUrl(targetRoute, { replaceUrl: true });
+                }, 100);
+              }
+            })
+            .catch(err => {
+              console.error(`[AuthService] ❌ Admin navigation error:`, err);
+              // Fallback in case of error - navigate to a safe route
+              this.router.navigate(['/']);
+            });
+          } else {
+            // For other roles, use the regular navigation
+            this.router.navigateByUrl(targetRoute, { replaceUrl: true })
+              .then(success => {
+                if (!success) {
+                  console.error(`[AuthService] ❌ Navigation to ${targetRoute} failed`);
+                  this.router.navigate(['/']);
+                }
+              })
+              .catch(err => {
+                console.error(`[AuthService] ❌ Navigation error:`, err);
+                this.router.navigate(['/']);
+              });
+          }
+        } catch (error) {
+          console.error(`[AuthService] ❌ Navigation exception:`, error);
+          // Safe fallback for any exception
+          setTimeout(() => {
+            this.router.navigate(['/']);
+          }, 100);
+        }
+      } else {
+        console.warn(`[AuthService] User not logged in, redirecting to login page`);
+        this.router.navigate(['/login']);
+      }
+    }, delay);
   }
 }

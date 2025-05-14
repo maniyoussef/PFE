@@ -12,9 +12,8 @@ import { RolesComponent } from './roles/roles.component';
 import { AdminProfileComponent } from './admin-profile/admin-profile.component';
 import { AssignementComponent } from './assignement/assignement.component';
 import { NotFoundComponent } from '../not-found/not-found.component';
-import { AdminReportsComponent } from './admin-reports.component/admin-reports.component';
+import { AdminReportsComponent } from './AdminReportsComponent';
 import { AdminLayoutComponent } from './admin-layout.component';
-import { ClientAssignmentsDebuggerComponent } from './client-assignments-debugger/client-assignments-debugger.component';
 import { authGuard } from '../../guards/auth.guard';
 import { UserRole } from '../../core/constants/roles';
 
@@ -73,10 +72,6 @@ export const ADMIN_ROUTES: Routes = [
       {
         path: 'assignement',
         component: AssignementComponent,
-      },
-      {
-        path: 'client-assignments-debugger',
-        component: ClientAssignmentsDebuggerComponent,
       },
       {
         path: 'rapports',

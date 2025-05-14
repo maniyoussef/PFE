@@ -7,7 +7,7 @@ import { ChefProjetEquipeComponent } from './chef-projet-equipe/chef-projet-equi
 import { ChefProjetTicketsComponent } from './chef-projet-tickets.component/chef-projet-tickets.component';
 import { TicketDetailComponent } from './chef-projet-tickets.component/ticket-detail.component';
 import { ChefProjetReportsComponent } from './chef-projet-reports.component/chef-projet-reports.component';
-import { ChefProjetAssignmentsComponent } from './chef-projet-assignments/chef-projet-assignments.component';
+import { ChefProjetProfileComponent } from './chef-projet-profile/chef-projet-profile.component';
 
 export const CHEF_PROJET_ROUTES: Routes = [
   {
@@ -20,7 +20,7 @@ export const CHEF_PROJET_ROUTES: Routes = [
       { path: 'reports', component: ChefProjetReportsComponent },
       { path: 'tickets', component: ChefProjetTicketsComponent },
       { path: 'tickets/:id', component: TicketDetailComponent },
-      { path: 'assignments', component: ChefProjetAssignmentsComponent },
+      { path: 'profile', component: ChefProjetProfileComponent },
     ],
   },
 ];

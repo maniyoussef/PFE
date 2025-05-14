@@ -3,6 +3,9 @@ import {
   provideRouter,
   withDebugTracing,
   withRouterConfig,
+  withComponentInputBinding,
+  withPreloading,
+  PreloadAllModules
 } from '@angular/router';
 import { routes } from './app.routes';
 import { provideAnimations } from '@angular/platform-browser/animations';
@@ -11,6 +14,12 @@ import { AuthService } from './core/services/auth.service';
 import { authInterceptor } from './interceptors/auth.interceptor';
 import { errorInterceptor } from './interceptors/error.interceptor.fn';
 import { provideClientHydration } from '@angular/platform-browser';
+
+// Import compiler for JIT compilation
+import '@angular/compiler';
+// Import platform-browser-dynamic for JIT compilation
+import { bootstrapApplication } from '@angular/platform-browser';
+import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
 
 // Material Modules
 import { MatSnackBarModule } from '@angular/material/snack-bar';
@@ -31,6 +40,8 @@ export const appConfig: ApplicationConfig = {
     provideRouter(
       routes,
       withDebugTracing(),
+      withComponentInputBinding(),
+      withPreloading(PreloadAllModules),
       withRouterConfig({
         onSameUrlNavigation: 'reload',
         paramsInheritanceStrategy: 'always',
@@ -38,7 +49,10 @@ export const appConfig: ApplicationConfig = {
       })
     ),
     provideAnimations(),
-    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
+    provideHttpClient(withInterceptors([
+      authInterceptor, 
+      errorInterceptor
+    ])),
     provideClientHydration(),
     importProvidersFrom(
       // Material Modules

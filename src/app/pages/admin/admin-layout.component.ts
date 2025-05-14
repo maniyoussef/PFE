@@ -77,7 +77,7 @@ import {
         min-height: 100vh;
         width: 100%;
         overflow-x: hidden;
-        padding-top: 140px;
+        padding-top: 70px;
         background-color: var(--surface);
         color: var(--text-dark);
       }
@@ -100,14 +100,19 @@ import {
         height: var(--navbar-height);
         z-index: 1001;
         box-shadow: var(--shadow-sm);
+        display: block !important;
+        visibility: visible !important;
+      }
+
+      ::ng-deep app-navbar * {
+        visibility: visible;
       }
 
       .admin-main-content {
         width: 100%;
         min-height: calc(100vh - var(--topbar-plus-navbar));
-        padding: 30px var(--content-padding) var(--content-padding);
+        padding: 20px var(--content-padding) var(--content-padding);
         box-sizing: border-box;
-        margin-top: 40px;
       }
 
       /* Global styles for dashboard cards and UI elements */
@@ -253,32 +258,57 @@ export class AdminLayoutComponent implements OnInit, OnDestroy {
               {
                 url: event.url,
                 navigationId: event.id,
-                previousUrl: event.urlAfterRedirects,
                 timestamp: new Date().toISOString(),
               }
             );
           } else if (event instanceof NavigationCancel) {
-            console.log(
-              '[AdminLayout] ❌ Navigation #' +
+            console.warn(
+              '[AdminLayout] ⚠️ Navigation #' +
                 this.navigationCount +
                 ' cancelled:',
               {
                 url: event.url,
                 reason: event.reason,
+                navigationId: event.id,
                 timestamp: new Date().toISOString(),
               }
             );
           } else if (event instanceof NavigationError) {
             console.error(
-              '[AdminLayout] 💥 Navigation #' +
+              '[AdminLayout] 🔴 Navigation #' +
                 this.navigationCount +
                 ' error:',
               {
                 url: event.url,
-                error: event.error,
+                errorMessage: event.error?.message || 'Unknown error',
+                errorName: event.error?.name,
+                navigationId: event.id,
                 timestamp: new Date().toISOString(),
+                error: event.error
               }
             );
+            
+            // For error recovery - navigate directly to dashboard if we detect specific errors
+            if (event.error?.message?.includes('AdminReportsComponent2') ||
+                (event.error?.message?.includes('Component') && 
+                event.error?.message?.includes('is not resolved'))) {
+              console.log('[AdminLayout] 🔧 Recovering from component resolution error');
+              
+              // Use setTimeout to break the navigation cycle
+              setTimeout(() => {
+                // Navigate to dashboard as a recovery measure with a clean navigation
+                this.router.navigate(['/admin/dashboard'], { 
+                  replaceUrl: true,
+                  skipLocationChange: false,
+                  queryParams: {},
+                  queryParamsHandling: ''
+                }).then(success => {
+                  console.log('[AdminLayout] Recovery navigation to dashboard:', success ? 'succeeded' : 'failed');
+                }).catch(err => {
+                  console.error('[AdminLayout] Failed to recover navigation:', err);
+                });
+              }, 100);
+            }
           }
         })
       )

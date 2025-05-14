@@ -7,16 +7,7 @@ import {
   FormBuilder,
   Validators,
 } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import {
-  MatDialogModule,
-  MatDialogRef,
-  MAT_DIALOG_DATA,
-} from '@angular/material/dialog';
+import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Country } from '../../../models/country.model';
 import { Role } from '../../../models/role.model';
@@ -39,11 +30,6 @@ interface DialogData {
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    MatButtonModule,
-    MatIconModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
     MatDialogModule,
     MatProgressSpinnerModule,
   ],
@@ -65,8 +51,7 @@ export class UserDialogComponent implements OnInit {
 
   ngOnInit(): void {
     this.createForm();
-    this.loadCountries();
-    this.loadRoles();
+    this.loadData();
   }
 
   createForm(): void {
@@ -79,40 +64,52 @@ export class UserDialogComponent implements OnInit {
     });
 
     if (this.data.isEdit && this.data.user) {
-      this.userForm.patchValue(this.data.user);
+      const formPatch = {
+        ...this.data.user,
+        countryId: this.data.user.country?.id || null,
+        roleId: this.data.user.role?.id || null
+      };
+      
+      console.log('Patching form with values:', formPatch);
+      this.userForm.patchValue(formPatch);
     }
   }
 
-  loadCountries(): void {
-    this.countryService.getCountries().subscribe({
-      next: (data) => {
-        this.countries = data;
-        this.checkDataLoaded();
-      },
-      error: (error) => {
-        console.error('Error loading countries:', error);
-        this.checkDataLoaded();
-      },
-    });
-  }
-
-  loadRoles(): void {
-    this.roleService.getRoles().subscribe({
-      next: (data) => {
-        this.roles = data;
-        this.checkDataLoaded();
-      },
-      error: (error) => {
-        console.error('Error loading roles:', error);
-        this.checkDataLoaded();
-      },
-    });
-  }
-
-  checkDataLoaded(): void {
-    if (this.countries.length > 0 && this.roles.length > 0) {
+  loadData(): void {
+    // Load countries and roles
+    Promise.all([
+      new Promise<void>((resolve) => {
+        this.countryService.getCountries().subscribe({
+          next: (data) => {
+            console.log('Countries loaded successfully:', data);
+            this.countries = data;
+            resolve();
+          },
+          error: (error) => {
+            console.error('Error loading countries:', error);
+            this.notificationService.showError('Failed to load countries. Please refresh and try again.');
+            resolve();
+          },
+        });
+      }),
+      new Promise<void>((resolve) => {
+        this.roleService.getRoles().subscribe({
+          next: (data) => {
+            console.log('Roles loaded successfully:', data);
+            this.roles = data;
+            resolve();
+          },
+          error: (error) => {
+            console.error('Error loading roles:', error);
+            this.notificationService.showError('Failed to load roles. Please refresh and try again.');
+            resolve();
+          },
+        });
+      })
+    ]).then(() => {
       this.isLoading = false;
-    }
+      console.log('All data loaded, form ready');
+    });
   }
 
   onCancel(): void {
@@ -121,11 +118,27 @@ export class UserDialogComponent implements OnInit {
 
   onSubmit(): void {
     if (this.userForm.valid) {
-      const user: User = this.userForm.value;
+      const formValues = this.userForm.value;
+      
+      // Find the complete country and role objects from the selections
+      const selectedCountry = this.countries.find(c => c.id === formValues.countryId);
+      const selectedRole = this.roles.find(r => r.id === formValues.roleId);
+      
+      // Format user with proper structure matching the User model
+      const user: User = {
+        ...formValues,
+        country: selectedCountry ? { 
+          id: selectedCountry.id,
+          name: selectedCountry.name
+        } : undefined,
+        role: selectedRole ? {
+          id: selectedRole.id,
+          name: selectedRole.name
+        } : undefined
+      };
+      
+      console.log('Submitting user data:', user);
       this.dialogRef.close(user);
-
-      // Remove this line to stop notification
-      // this.notificationService.notifyNewTicket(user.name);
     } else {
       this.userForm.markAllAsTouched();
     }

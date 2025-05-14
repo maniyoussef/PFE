@@ -9,6 +9,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-chef-projet-equipe',
@@ -21,13 +22,16 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
     MatIconModule,
     MatButtonModule,
     MatProgressSpinnerModule,
+    MatTooltipModule,
   ],
 })
 export class ChefProjetEquipeComponent implements OnInit {
   collaborators: User[] = [];
+  filteredCollaborators: User[] = [];
   currentUser!: User;
   isLoading = true;
   errorMessage: string | null = null;
+  searchTerm: string = '';
 
   constructor(
     private userService: UserService,
@@ -37,6 +41,31 @@ export class ChefProjetEquipeComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadUserDetails();
+  }
+
+  // Search collaborators based on input
+  searchCollaborators(event: Event): void {
+    const searchInput = (event.target as HTMLInputElement).value;
+    this.searchTerm = searchInput;
+    this.filterCollaborators();
+  }
+  
+  // Filter collaborators based on search term
+  filterCollaborators(): void {
+    if (!this.searchTerm.trim()) {
+      this.filteredCollaborators = [...this.collaborators];
+      return;
+    }
+    
+    const searchTermLower = this.searchTerm.toLowerCase().trim();
+    this.filteredCollaborators = this.collaborators.filter(collaborator => 
+      (collaborator.name?.toLowerCase().includes(searchTermLower) || 
+       collaborator.lastName?.toLowerCase().includes(searchTermLower) || 
+       collaborator.email?.toLowerCase().includes(searchTermLower) ||
+       collaborator.role?.name?.toLowerCase().includes(searchTermLower))
+    );
+    
+    console.log(`Filtered collaborators: ${this.filteredCollaborators.length} matches for "${this.searchTerm}"`);
   }
 
   private loadUserDetails(): void {
@@ -102,6 +131,7 @@ export class ChefProjetEquipeComponent implements OnInit {
         .subscribe({
           next: (collaborateurs: User[]) => {
             this.collaborators = collaborateurs;
+            this.filteredCollaborators = [...collaborateurs]; // Initialize filtered collaborators
             this.isLoading = false;
           },
           error: (error) => {

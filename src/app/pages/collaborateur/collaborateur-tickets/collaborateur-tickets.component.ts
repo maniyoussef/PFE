@@ -1,23 +1,24 @@
 import { Component, OnInit, OnDestroy, inject, ViewChild } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { CommonModule } from '@angular/common';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { CommonModule, DatePipe } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Ticket } from '../../../models/ticket.model';
-import { User } from '../../../models/user.model';
 import { AuthService } from '../../../services/auth.service';
 import { lastValueFrom } from 'rxjs';
 import { ReportDialogComponent } from '../report-dialog.component';
 import { DescriptionDialogComponent } from '../../../components/description-dialog/description-dialog.component';
-import { CommentDialogComponent } from './comment-dialog.component';
 import { ConfirmationDialogComponent } from '../../../components/confirmation-dialog/confirmation-dialog.component';
+import { ExportDialogComponent } from './export-dialog.component';
 import { TicketService } from '../../../services/ticket.service';
 import { TicketDebugService } from '../../../services/ticket-debug.service';
+import { ExcelService } from '../../../services/excel.service';
+import { FormsModule } from '@angular/forms';
 import {
   interval,
   Subscription,
@@ -27,6 +28,11 @@ import {
   finalize,
   switchMap,
   take,
+  tap,
+  catchError,
+  of,
+  throwError,
+  forkJoin,
 } from 'rxjs';
 import { TICKET_STATUS } from '../../../constants/ticket-status.constant';
 import { MatTableDataSource } from '@angular/material/table';
@@ -38,6 +44,13 @@ import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatSortModule } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
+import { environment } from '../../../../environments/environment';
+import { Inject } from '@angular/core';
+import { MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { ChangeDetectorRef } from '@angular/core';
+import { TicketDetailsDialogComponent } from '../../../components/ticket-details-dialog/ticket-details-dialog.component';
+import { TicketActionsDialogComponent } from '../../../components/ticket-actions-dialog/ticket-actions-dialog.component';
+import { CommentDialogComponent } from '../../../pages/admin/tickets/comment-dialog.component';
 
 @Component({
   selector: 'app-collaborateur-tickets',
@@ -56,12 +69,155 @@ import { Router } from '@angular/router';
     MatSortModule,
     MatTableModule,
     MatProgressSpinnerModule,
+    FormsModule,
   ],
   templateUrl: './collaborateur-tickets.component.html',
   styleUrls: ['./collaborateur-tickets.component.scss'],
+  styles: [`
+    ::ng-deep .non-blocking-snackbar {
+      position: fixed !important;
+      bottom: 20px !important;
+      right: 20px !important;
+      margin: 0 !important;
+      z-index: 9999 !important;
+      max-width: 300px !important;
+    }
+    
+    ::ng-deep .non-blocking-snackbar .mat-mdc-snack-bar-container {
+      box-shadow: 0 3px 5px -1px rgba(0,0,0,.2), 0 6px 10px 0 rgba(0,0,0,.14), 0 1px 18px 0 rgba(0,0,0,.12) !important;
+    }
+    
+    ::ng-deep .non-blocking-snackbar .mdc-snackbar__surface {
+      background-color: #323232 !important;
+      opacity: 0.9 !important;
+    }
+    
+    /* Global overlay container - highest z-index */
+    ::ng-deep .cdk-overlay-container {
+      z-index: 10000 !important;
+      position: fixed !important;
+    }
+    
+    /* Global overlay wrapper - ensures proper positioning */
+    ::ng-deep .cdk-global-overlay-wrapper {
+      z-index: 10000 !important;
+      display: flex !important;
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      height: 100% !important;
+      width: 100% !important;
+      justify-content: center !important;
+      align-items: center !important;
+      pointer-events: none !important;
+    }
+    
+    /* Overlay pane - contains the actual dialog */
+    ::ng-deep .cdk-overlay-pane {
+      position: static !important; /* Changed from fixed to static for better positioning */
+      pointer-events: auto !important;
+      box-sizing: border-box !important;
+      z-index: 10001 !important;
+      display: flex !important;
+      max-width: 90% !important; /* Reduced from 95% to 90% */
+      max-height: 90% !important; /* Reduced from 95% to 90% */
+      margin: auto !important;
+    }
+    
+    /* Dialog container */
+    ::ng-deep .mat-mdc-dialog-container {
+      z-index: 10001 !important;
+      max-height: 90vh !important;
+      max-width: 90vw !important;
+      overflow: visible !important;
+      display: flex !important;
+      flex-direction: column !important;
+    }
+
+    /* High performance dialog */
+    ::ng-deep .high-performance-dialog {
+      z-index: 10001 !important;
+    }
+
+    /* Dialog container */
+    ::ng-deep .mat-dialog-container {
+      position: relative !important;
+      z-index: 10001 !important;
+      box-shadow: 0 11px 15px -7px rgba(0,0,0,.2), 0 24px 38px 3px rgba(0,0,0,.14), 0 9px 46px 8px rgba(0,0,0,.12) !important;
+      overflow: visible !important;
+      border-radius: 8px !important;
+      margin: auto !important;
+    }
+    
+    /* Centered dialog */
+    ::ng-deep .centered-dialog {
+      margin: auto !important;
+    }
+    
+    /* Light backdrop */
+    ::ng-deep .light-backdrop {
+      background: rgba(0, 0, 0, 0.5) !important;
+    }
+    
+    /* Simplified dialog */
+    ::ng-deep .simplified-dialog {
+      max-width: 90% !important;
+      width: auto !important;
+      min-width: 350px !important; /* Reduced from 400px to 350px */
+      overflow: visible !important;
+      margin: auto !important;
+    }
+
+    /* Dialog content */
+    ::ng-deep .dialog-content {
+      width: 100% !important;
+      overflow-x: visible !important;
+      overflow-y: auto !important;
+      max-height: 70vh !important;
+      padding: 16px !important;
+    }
+
+    /* Details table */
+    ::ng-deep .details-table {
+      table-layout: fixed !important;
+      width: 100% !important;
+      border-collapse: collapse !important;
+    }
+
+    ::ng-deep .details-table td {
+      word-wrap: break-word !important;
+      overflow-wrap: break-word !important;
+      padding: 8px !important;
+    }
+    
+    /* Dialog container */
+    ::ng-deep .mdc-dialog__container {
+      height: auto !important;
+      overflow: visible !important;
+      display: flex !important;
+      flex-direction: column !important;
+      margin: auto !important;
+    }
+    
+    /* Dialog surface */
+    ::ng-deep .mdc-dialog__surface {
+      overflow: visible !important;
+      max-width: 95vw !important;
+    }
+  `]
 })
 export class CollaborateurTicketsComponent implements OnInit, OnDestroy {
   tickets: Ticket[] = [];
+  filteredTickets: Ticket[] = [];
+  searchTerm = '';
+  currentSortValue = 'newest';
+  
+  // Properties for filtering export
+  projects: any[] = [];
+  problemCategories: any[] = [];
+  statuses: string[] = ['Assigned', 'In Progress', 'Resolved', 'Unresolved'];
+  priorities: string[] = ['Haute', 'Moyenne', 'Basse'];
+
   displayedColumns: string[] = [
     'title',
     'project',
@@ -74,64 +230,61 @@ export class CollaborateurTicketsComponent implements OnInit, OnDestroy {
   error: string | null = null;
   currentUserId!: number;
   private destroy$ = new Subject<void>();
-  activeTimer: { ticketId: number; subscription: Subscription } | null = null;
-  private lastServerUpdate: { [key: number]: number } = {};
   private readonly UPDATE_INTERVAL = 60000; // 1 minute in milliseconds
-  currentDurations: { [key: number]: string } = {};
+
+  // Active timer state - needed for the HTML template
+  activeTimer: { ticketId: number; startTime: Date } | null = null;
 
   // Statistics properties
   totalTickets = 0;
+  assignedTickets = 0;
   resolvedTickets = 0;
   nonResolvedTickets = 0;
   inProgressTickets = 0;
-  averageDuration = '0m';
+  averageDuration = '00:00:00';
 
   // Constants for easy reference
   readonly STATUS = TICKET_STATUS;
 
-  // Common variables moved to class level for better tracking and debugging
-  private timerStartedAt: Date | null = null;
-  private baseAccumulatedDuration = 0; // Tracks duration already saved in DB
-
   dataSource!: MatTableDataSource<Ticket>;
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
+
+  // Helper to format seconds as HH:mm:ss
+  private formatDuration(seconds: number): string {
+    const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }
+
+  // Timer state
+  private timerSub: Subscription | null = null;
+  private timerTicketId: number | null = null;
+  private timerBaseDuration: number = 0;
+  private timerStartTime: Date | null = null;
+  public timerDisplay: string = '00:00:00';
 
   constructor(
     private http: HttpClient,
     private auth: AuthService,
     private snackBar: MatSnackBar,
     public dialog: MatDialog,
-    private ticketService: TicketService,
+    public ticketService: TicketService,
     private ticketDebugService: TicketDebugService,
-    private router: Router
+    private router: Router,
+    private excelService: ExcelService,
   ) {}
 
   ngOnInit(): void {
-    this.isLoading = true;
-    this.auth.getCurrentUser().subscribe({
-      next: (user) => {
-        if (user && user.id !== undefined) {
-          this.currentUserId = user.id as number; // Force type assertion after null check
-          this.loadTickets();
-        } else {
-          console.error('User not found or ID is undefined');
-          this.router.navigate(['/login']);
-        }
-      },
-      error: (error) => {
-        console.error('Error fetching current user:', error);
-        this.router.navigate(['/login']);
-      },
-    });
+    console.log('[CollaborateurTicketsComponent] Initializing component');
+    this.loadTickets();
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    if (this.activeTimer) {
-      this.activeTimer.subscription.unsubscribe();
-    }
+    this.stopTimer();
   }
 
   loadTickets(): void {
@@ -151,30 +304,46 @@ export class CollaborateurTicketsComponent implements OnInit, OnDestroy {
             `[CollaborateurTicketsComponent] Loading tickets for user ID: ${this.currentUserId}`
           );
 
-          // Get tickets explicitly assigned to the current user using the dedicated endpoint
           return this.ticketService.getUserAssignedTickets(this.currentUserId);
         }),
-        finalize(() => (this.isLoading = false))
+        finalize(() => {
+          this.isLoading = false;
+          
+          // Apply default sort as soon as data is loaded and loading state is finished
+          if (this.filteredTickets.length > 0) {
+            console.log('[CollaborateurTicketsComponent] Applying initial sort after loading');
+            this.applyCurrentSort();
+          }
+        })
       )
       .subscribe({
         next: (tickets) => {
+          // Log only the count for better console readability
           console.log(
             `[CollaborateurTicketsComponent] Retrieved ${tickets.length} tickets assigned to collaborateur`
           );
+          
+          // Debug: Log createdAt dates from API response
+          tickets.forEach(ticket => {
+            console.log(`Ticket #${ticket.id} createdAt from API: ${ticket.createdAt}, type: ${typeof ticket.createdAt}`);
+          });
 
-          // Normalize ticket status to use the standard format
+          // Process tickets without modifying the createdAt values from the API
           this.tickets = tickets.map((ticket) => {
-            // If status is in uppercase or lowercase format, convert to standard format
+            // Fix status display
             if (
               ticket.status?.toUpperCase() === 'ASSIGNED' ||
               ticket.status === 'assigné'
             ) {
-              return { ...ticket, status: this.STATUS.ASSIGNED };
+              ticket.status = this.STATUS.ASSIGNED;
             }
+            
+            // DO NOT modify createdAt - keep the original value from the API
+            
             return ticket;
           });
 
-          // Initialize table data source
+          this.filteredTickets = [...this.tickets];
           this.dataSource = new MatTableDataSource(this.tickets);
           if (this.paginator) {
             this.dataSource.paginator = this.paginator;
@@ -183,11 +352,16 @@ export class CollaborateurTicketsComponent implements OnInit, OnDestroy {
             this.dataSource.sort = this.sort;
           }
 
-          // Update statistics
+          // Extract unique projects and problem categories for filtering
+          this.extractFilterData();
+          
           this.updateStatistics();
-
-          // Restore timer state if there's an active ticket
-          this.restoreTimerStateIfNeeded();
+          
+          // Fetch detailed ticket data for tickets missing a createdAt value
+          this.fetchMissingTicketDates();
+          
+          // Apply default sort immediately after data is set
+          this.applyCurrentSort();
         },
         error: (error) => {
           console.error(
@@ -208,136 +382,359 @@ export class CollaborateurTicketsComponent implements OnInit, OnDestroy {
         },
       });
   }
-
-  private restoreTimerStateIfNeeded(): void {
-    // If we already have an active timer, don't do anything
-    if (this.activeTimer) return;
-
-    // Check for active tickets that need timer restoration
-    const activeTicket = this.tickets.find(
-      (ticket) =>
-        ticket.status === this.STATUS.IN_PROGRESS &&
-        !ticket.temporarilyStopped &&
-        !ticket.workFinished &&
-        ticket.workDuration !== undefined
+  
+  // Fetch and update ticket data for tickets missing createdAt
+  private fetchMissingTicketDates(): void {
+    if (!this.tickets || this.tickets.length === 0) return;
+    
+    // Find tickets that have an ID but no valid date information using our parsing method
+    const ticketsNeedingUpdate = this.tickets.filter(ticket => 
+      ticket.id && this.parseTicketDate(ticket) === 0
     );
-
-    if (activeTicket) {
-      console.log(
-        '[TIMER] Found active ticket that was in progress:',
-        activeTicket
-      );
-
-      // Don't auto-start the timer, just notify the user they have an active ticket
-      this.snackBar.open(
-        `Le ticket "${activeTicket.title}" est en cours. Cliquez sur "Commencer" pour reprendre le travail.`,
-        'Fermer',
-        { duration: 5000 }
-      );
-
-      // We don't automatically start the timer anymore
-      // Just log for debugging purposes
-      console.log(
-        '[TIMER] Timer NOT auto-started, waiting for user to click "Commencer":',
-        {
-          ticketId: activeTicket.id,
-          baseAccumulatedDuration: activeTicket.workDuration || 0,
-        }
-      );
+    
+    console.log(`[CollaborateurTicketsComponent] Fetching detailed data for ${ticketsNeedingUpdate.length} tickets missing date information`);
+    
+    if (ticketsNeedingUpdate.length === 0) return;
+    
+    // Only update the first 10 to avoid too many requests
+    const ticketsToUpdate = ticketsNeedingUpdate.slice(0, 10);
+    
+    // Create an array of observables for each ticket to fetch
+    const fetchObservables = ticketsToUpdate.map(ticket => 
+      this.ticketService.getTicketById(ticket.id).pipe(
+        tap(updatedTicket => {
+          if (updatedTicket) {
+            console.log(`[Ticket Update] Fetched details for ticket #${ticket.id}, createdAt: ${updatedTicket.createdAt}`);
+            
+            // Update the ticket in our arrays
+            const index = this.tickets.findIndex(t => t.id === ticket.id);
+            if (index !== -1) {
+              this.tickets[index] = updatedTicket;
+              
+              // Also update in filteredTickets
+              const filteredIndex = this.filteredTickets.findIndex(t => t.id === ticket.id);
+              if (filteredIndex !== -1) {
+                this.filteredTickets[filteredIndex] = updatedTicket;
+              }
+            }
+          }
+        }),
+        catchError(error => {
+          console.error(`[Ticket Update] Failed to fetch details for ticket #${ticket.id}:`, error);
+          return of(null);
+        })
+      )
+    );
+    
+    // Execute all fetch operations in parallel
+    if (fetchObservables.length > 0) {
+      forkJoin(fetchObservables)
+        .pipe(
+          finalize(() => {
+            console.log('[Ticket Update] Completed fetching missing ticket dates');
+            
+            // Update the data source with the updated tickets
+            this.dataSource.data = this.tickets;
+            
+            // Re-apply sorting after updating ticket data
+            this.applyCurrentSort();
+            
+            // Force change detection
+            this.filteredTickets = [...this.filteredTickets];
+          })
+        )
+        .subscribe();
     }
   }
 
-  showError(message: string): void {
-    this.snackBar.open(message, 'Fermer', {
-      duration: 5000,
-      panelClass: ['error-snackbar'],
+  // Extract unique projects and problem categories for filter options
+  private extractFilterData(): void {
+    console.log('Extracting filter data from', this.tickets.length, 'tickets');
+    
+    // Extract unique projects
+    const projectsMap = new Map();
+    this.tickets.forEach(ticket => {
+      if (ticket.project && ticket.project.id) {
+        projectsMap.set(ticket.project.id, {
+          id: ticket.project.id,
+          name: ticket.project.name || 'Projet sans nom'
+        });
+      }
+    });
+    this.projects = Array.from(projectsMap.values());
+    console.log('Extracted', this.projects.length, 'unique projects');
+    
+    // Extract unique problem categories
+    const categoriesMap = new Map();
+    this.tickets.forEach(ticket => {
+      if (ticket.problemCategory && ticket.problemCategory.id) {
+        categoriesMap.set(ticket.problemCategory.id, {
+          id: ticket.problemCategory.id,
+          name: ticket.problemCategory.name || 'Catégorie sans nom'
+        });
+      }
+    });
+    this.problemCategories = Array.from(categoriesMap.values());
+    console.log('Extracted', this.problemCategories.length, 'unique problem categories');
+    
+    // Normalize statuses
+    const statusSet = new Set<string>();
+    this.tickets.forEach(ticket => {
+      if (ticket.status) {
+        statusSet.add(ticket.status);
+      }
+    });
+    this.statuses = Array.from(statusSet);
+    console.log('Extracted', this.statuses.length, 'unique statuses:', this.statuses);
+    
+    // Normalize priorities
+    const prioritySet = new Set<string>();
+    this.tickets.forEach(ticket => {
+      if (ticket.priority) {
+        prioritySet.add(ticket.priority);
+      }
+    });
+    this.priorities = Array.from(prioritySet);
+    console.log('Extracted', this.priorities.length, 'unique priorities:', this.priorities);
+    
+    // If arrays are empty, provide defaults
+    if (this.statuses.length === 0) {
+      this.statuses = ['Assigned', 'In Progress', 'Resolved', 'Unresolved'];
+    }
+    
+    if (this.priorities.length === 0) {
+      this.priorities = ['Haute', 'Moyenne', 'Basse'];
+    }
+  }
+
+  // Filter tickets based on search term
+  filterTickets(event: Event): void {
+    const searchValue = (event.target as HTMLInputElement).value.toLowerCase().trim();
+    this.searchTerm = searchValue;
+    
+    if (!searchValue) {
+      this.filteredTickets = [...this.tickets];
+    } else {
+      this.filteredTickets = this.tickets.filter(ticket => 
+        (ticket.title && ticket.title.toLowerCase().includes(searchValue)) ||
+        (ticket.description && ticket.description.toLowerCase().includes(searchValue)) ||
+        (ticket.id && ticket.id.toString().includes(searchValue)) ||
+        (ticket.project?.name && ticket.project.name.toLowerCase().includes(searchValue)) ||
+        (ticket.problemCategory?.name && ticket.problemCategory.name.toLowerCase().includes(searchValue)) ||
+        (ticket.status && ticket.status.toLowerCase().includes(searchValue))
+      );
+    }
+    
+    // Re-apply current sort
+    this.applyCurrentSort();
+  }
+
+  // Apply sort based on selection
+  applySort(event: Event): void {
+    this.currentSortValue = (event.target as HTMLSelectElement).value;
+    this.applyCurrentSort();
+  }
+  
+  // Helper method to parse dates consistently
+  private parseTicketDate(ticket: Ticket): number {
+    // Try different date fields
+    const dateStr = ticket.createdAt || 
+                   (ticket as any).createdDate || 
+                   (ticket as any).creationDate ||
+                   (ticket as any).created ||
+                   (ticket as any).dateCreated;
+    
+    if (!dateStr) {
+      return 0; // Default to oldest possible date (timestamp 0)
+    }
+    
+    try {
+      const timestamp = new Date(dateStr).getTime();
+      return isNaN(timestamp) ? 0 : timestamp;
+    } catch (error) {
+      console.error(`[Date Parsing] Error parsing date ${dateStr}:`, error);
+      return 0;
+    }
+  }
+
+  // Apply the current sort selection
+  private applyCurrentSort(): void {
+    console.log('[Sorting] Applying sort with value:', this.currentSortValue);
+    
+    // Debug ticket dates before sorting
+    if (this.currentSortValue === 'newest' || this.currentSortValue === 'oldest') {
+      console.log('[Sorting] Sample of ticket dates before sorting:');
+      this.filteredTickets.slice(0, 5).forEach(ticket => {
+        console.log(`Ticket #${ticket.id} createdAt: ${ticket.createdAt}, parsed timestamp: ${this.parseTicketDate(ticket)}`);
+      });
+    }
+    
+    switch(this.currentSortValue) {
+      case 'newest':
+        this.filteredTickets.sort((a, b) => {
+          const timestampA = this.parseTicketDate(a);
+          const timestampB = this.parseTicketDate(b);
+          return timestampB - timestampA; // Most recent first
+        });
+        break;
+      case 'oldest':
+        this.filteredTickets.sort((a, b) => {
+          const timestampA = this.parseTicketDate(a);
+          const timestampB = this.parseTicketDate(b);
+          return timestampA - timestampB; // Oldest first
+        });
+        break;
+      case 'status':
+        this.filteredTickets.sort((a, b) => {
+          const statusA = a.status || '';
+          const statusB = b.status || '';
+          return statusA.localeCompare(statusB);
+        });
+        break;
+      case 'title':
+        this.filteredTickets.sort((a, b) => {
+          const titleA = a.title || '';
+          const titleB = b.title || '';
+          return titleA.localeCompare(titleB);
+        });
+        break;
+      case 'priority':
+        // Define priority order
+        const priorityOrder = { 'Haute': 1, 'Moyenne': 2, 'Basse': 3 };
+        this.filteredTickets.sort((a, b) => {
+          const priorityA = a.priority ? priorityOrder[a.priority as keyof typeof priorityOrder] || 4 : 4;
+          const priorityB = b.priority ? priorityOrder[b.priority as keyof typeof priorityOrder] || 4 : 4;
+          return priorityA - priorityB;
+        });
+        break;
+    }
+    
+    // Debug ticket dates after sorting
+    if (this.currentSortValue === 'newest' || this.currentSortValue === 'oldest') {
+      console.log('[Sorting] Sample of ticket dates after sorting:');
+      this.filteredTickets.slice(0, 5).forEach(ticket => {
+        console.log(`Ticket #${ticket.id} createdAt: ${ticket.createdAt}, parsed timestamp: ${this.parseTicketDate(ticket)}`);
+      });
+    }
+  }
+
+  // Open export dialog
+  openExportDialog(): void {
+    // Ensure we have data for the dialog
+    if (this.tickets.length === 0) {
+      this.snackBar.open('Aucun ticket à exporter', 'Fermer', { duration: 3000 });
+      return;
+    }
+    
+    // If data hasn't been extracted yet, do it now
+    if (this.projects.length === 0 && this.problemCategories.length === 0) {
+      this.extractFilterData();
+    }
+    
+    // Prepare data for the dialog
+    const dialogData = {
+      projects: this.projects,
+      problemCategories: this.problemCategories,
+      statuses: this.statuses,
+      priorities: this.priorities,
+    };
+    
+    console.log('Opening export dialog with data:', {
+      projects: dialogData.projects.length,
+      problemCategories: dialogData.problemCategories.length,
+      statuses: dialogData.statuses,
+      priorities: dialogData.priorities
+    });
+    
+    const dialogRef = this.dialog.open(ExportDialogComponent, {
+      width: '500px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      panelClass: ['export-dialog', 'mat-elevation-z24'],
+      disableClose: false,
+      autoFocus: true,
+      data: dialogData,
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        console.log('Export dialog result:', result);
+        this.exportTickets(result);
+      }
     });
   }
 
-  private updateActiveTimers(): void {
-    if (!this.activeTimer) return;
+  // Export tickets based on filter options
+  private exportTickets(filterOptions: any): void {
+    let filteredTickets: Ticket[] = [];
+    let fileName = 'tickets-collaborateur';
 
-    const ticket = this.tickets.find(
-      (t) => t.id === this.activeTimer?.ticketId
-    );
-    if (!ticket) return;
-
-    // Calculate current session duration in seconds with actual time checks
-    const now = new Date();
-    const currentSessionDuration = this.calculateExactSessionDuration(now);
-
-    // Total duration = what was in DB (baseAccumulatedDuration) + current session duration
-    const totalDuration = this.baseAccumulatedDuration + currentSessionDuration;
-
-    // Debug log (only every 5 seconds to reduce noise)
-    if (currentSessionDuration % 5 === 0) {
-      console.log(`[TIMER DEBUG] Update for ticket ${ticket.id}:`, {
-        baseAccumulatedDuration: this.baseAccumulatedDuration,
-        currentSessionDuration,
-        totalDuration,
-        timerStartedAt: this.timerStartedAt?.toISOString(),
-        nowTime: now.toISOString(),
-        diff_ms: this.timerStartedAt
-          ? now.getTime() - this.timerStartedAt.getTime()
-          : 0,
-      });
-    }
-
-    // IMPORTANT: Update UI with correct total
-    const index = this.tickets.findIndex((t) => t.id === ticket.id);
-    if (index !== -1) {
-      // Create a new array reference to force change detection
-      this.tickets = [
-        ...this.tickets.slice(0, index),
-        {
-          ...ticket,
-          workDuration: totalDuration,
-          // Store currentSession separately to avoid calculation errors with the data model
-          currentSessionDuration: currentSessionDuration,
-        },
-        ...this.tickets.slice(index + 1),
-      ];
-    }
-
-    // Save to server periodically
-    const nowTime = now.getTime();
-    if (
-      !this.lastServerUpdate[ticket.id] ||
-      nowTime - this.lastServerUpdate[ticket.id] >= this.UPDATE_INTERVAL
-    ) {
-      console.log(
-        `[TIMER] Saving to DB: ${totalDuration} seconds for ticket ${ticket.id}`
+    // Apply filters
+    if (filterOptions.filterType === 'all') {
+      filteredTickets = [...this.tickets];
+    } else if (filterOptions.filterType === 'project' && filterOptions.projectId) {
+      filteredTickets = this.tickets.filter(
+        t => t.project && t.project.id === filterOptions.projectId
       );
+      const projectName = this.projects.find(
+        p => p.id === filterOptions.projectId
+      )?.name || 'projet';
+      fileName = `tickets-${projectName}`;
+    } else if (filterOptions.filterType === 'problemCategory' && filterOptions.problemCategoryId) {
+      filteredTickets = this.tickets.filter(
+        t => t.problemCategory && t.problemCategory.id === filterOptions.problemCategoryId
+      );
+      const categoryName = this.problemCategories.find(
+        c => c.id === filterOptions.problemCategoryId
+      )?.name || 'categorie';
+      fileName = `tickets-${categoryName}`;
+    } else if (filterOptions.filterType === 'status' && filterOptions.status) {
+      filteredTickets = this.tickets.filter(
+        t => t.status === filterOptions.status
+      );
+      fileName = `tickets-${filterOptions.status}`;
+    } else if (filterOptions.filterType === 'priority' && filterOptions.priority) {
+      filteredTickets = this.tickets.filter(
+        t => t.priority === filterOptions.priority
+      );
+      fileName = `tickets-priorite-${filterOptions.priority}`;
+    }
 
-      // CRITICAL: Send only the minimum necessary data to update the work duration
-      // This prevents 400 Bad Request errors by not sending incomplete data
-      this.ticketService
-        .updateTicketWorkDuration(ticket.id, totalDuration)
-        .subscribe({
-          next: (response) => {
-            console.log(
-              `[TIMER] Saved duration ${totalDuration} to DB`,
-              response
-            );
-            this.lastServerUpdate[ticket.id] = nowTime;
-            // IMPORTANT: Update our base with the value we just saved
-            this.baseAccumulatedDuration = totalDuration;
-          },
-          error: (err) => {
-            console.error('[TIMER] Error saving duration to DB:', err);
-            // Don't show error to the user to avoid excessive notifications
-          },
-        });
+    // Export to Excel if we have tickets
+    if (filteredTickets.length > 0) {
+      this.excelService.exportToExcel(filteredTickets, fileName);
+      this.snackBar.open('Export Excel réussi', 'Fermer', { duration: 3000 });
+    } else {
+      this.snackBar.open('Aucun ticket à exporter', 'Fermer', {
+        duration: 3000,
+      });
     }
   }
 
-  // Precise calculation function for duration
-  private calculateExactSessionDuration(now: Date): number {
-    if (!this.timerStartedAt) return 0;
-
-    // Use exact millisecond calculations then convert to seconds
-    const exact_ms = now.getTime() - this.timerStartedAt.getTime();
-    return Math.floor(exact_ms / 1000); // Use floor to avoid rounding up prematurely
+  // Format date for display - matches exactly what's used in the details dialog
+  formatCreatedDate(ticketData: any): string {
+    // Use our consistent date parsing method to get the timestamp
+    const timestamp = this.parseTicketDate(ticketData);
+    
+    if (timestamp === 0) {
+      return 'Date inconnue';
+    }
+    
+    try {
+      const date = new Date(timestamp);
+      
+      // Use the exact same format as used in the details dialog
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      
+      return `${day}/${month}/${year} ${hours}:${minutes}`;
+    } catch (error) {
+      console.error('[Date Formatting] Error formatting date:', error);
+      return 'Erreur de date';
+    }
   }
 
   private updateStatistics(): void {
@@ -351,16 +748,24 @@ export class CollaborateurTicketsComponent implements OnInit, OnDestroy {
     this.inProgressTickets = this.tickets.filter(
       (ticket) => ticket.status === this.STATUS.IN_PROGRESS
     ).length;
+    this.assignedTickets = this.tickets.filter(
+      (ticket) => ticket.status === this.STATUS.ASSIGNED
+    ).length;
 
-    // Calculate average duration
-    const totalDuration = this.tickets.reduce(
-      (sum, ticket) => sum + (ticket.workDuration || 0),
-      0
+    // Calculate average duration only from tickets that have a workDuration value
+    const ticketsWithDuration = this.tickets.filter(ticket => 
+      ticket.workDuration !== undefined && 
+      ticket.workDuration !== null && 
+      !isNaN(ticket.workDuration) && 
+      ticket.workDuration > 0
     );
-
-    if (this.totalTickets > 0) {
-      const averageSeconds = Math.round(totalDuration / this.totalTickets);
-      this.averageDuration = this.formatDurationHumanReadable(averageSeconds);
+    
+    if (ticketsWithDuration.length > 0) {
+      const totalDuration = ticketsWithDuration.reduce(
+        (sum, ticket) => sum + (ticket.workDuration || 0), 0
+      );
+      const averageSeconds = Math.round(totalDuration / ticketsWithDuration.length);
+      this.averageDuration = this.formatDuration(averageSeconds);
     } else {
       this.averageDuration = '00:00:00';
     }
@@ -381,769 +786,83 @@ export class CollaborateurTicketsComponent implements OnInit, OnDestroy {
     }
   }
 
-  getStatusClass(status: string): string {
-    switch (status) {
-      case this.STATUS.ASSIGNED:
-        return 'status-assigned';
-      case this.STATUS.IN_PROGRESS:
-        return 'status-in-progress';
-      case this.STATUS.RESOLVED:
-        return 'status-resolved';
-      case this.STATUS.UNRESOLVED:
-        return 'status-unresolved';
-      default:
-        return '';
+  // Method for the stopTimer error
+  private stopTimer(): void {
+    if (this.timerSub) {
+      this.timerSub.unsubscribe();
+      this.timerSub = null;
     }
-  }
-
-  onStartWork(ticket: Ticket): void {
-    // Don't allow starting work on a different ticket if one is already active
-    if (this.activeTimer && this.activeTimer.ticketId !== ticket.id) {
-      this.showError(
-        "Veuillez arrêter le travail sur le ticket actif avant d'en démarrer un autre"
-      );
-      return;
-    }
-
-    // Handle resuming work on a paused ticket
-    const wasTemporarilyStopped = ticket.temporarilyStopped;
-
-    // Store the base accumulated duration (either current or 0 if starting fresh)
-    // For 'in progress' tickets, always use the existing duration
-    if (ticket.status === this.STATUS.IN_PROGRESS) {
-      this.baseAccumulatedDuration = ticket.workDuration || 0;
-      console.log(
-        '[TIMER] Using saved duration for IN_PROGRESS ticket:',
-        this.baseAccumulatedDuration
-      );
-    } else {
-      // For new tickets (assigned status), start from 0
-      this.baseAccumulatedDuration = wasTemporarilyStopped
-        ? ticket.workDuration || 0
-        : 0;
-      console.log(
-        '[TIMER] Using duration for new/paused ticket:',
-        this.baseAccumulatedDuration
-      );
-    }
-
-    const timestamp = new Date();
-    this.timerStartedAt = timestamp;
-
-    console.log('[TIMER] STARTING work on ticket:', ticket.id, {
-      timestamp: timestamp.toISOString(),
-      wasTemporarilyStopped,
-      baseAccumulatedDuration: this.baseAccumulatedDuration,
-      currentStatus: ticket.status,
-    });
-
-    // Set the ticket to in-progress status (2)
-    const index = this.tickets.findIndex((t) => t.id === ticket.id);
-    if (index !== -1) {
-      this.tickets[index] = {
-        ...this.tickets[index],
-        status: this.STATUS.IN_PROGRESS,
-        temporarilyStopped: false,
-        startWorkTime: wasTemporarilyStopped
-          ? this.tickets[index].startWorkTime
-          : timestamp.toISOString(),
-        currentSessionDuration: 0, // Initialize session duration
-      };
-
-      // Force change detection
-      this.tickets = [...this.tickets];
-    }
-
-    // Create a timer that updates the UI every second
-    const timer = interval(1000).pipe(
-      map(() => {
-        const now = new Date();
-        const sessionDuration = this.calculateExactSessionDuration(now);
-
-        // Update the UI with the new duration
-        const ticketIndex = this.tickets.findIndex((t) => t.id === ticket.id);
-        if (ticketIndex !== -1) {
-          this.tickets[ticketIndex] = {
-            ...this.tickets[ticketIndex],
-            currentSessionDuration: sessionDuration,
-            workDuration: this.baseAccumulatedDuration + sessionDuration,
-          };
-
-          // Force change detection for the tickets array
-          this.tickets = [...this.tickets];
-        }
-
-        return now;
-      })
-    );
-
-    // Subscribe to the timer and save the subscription so we can unsubscribe later
-    const subscription = timer.subscribe({
-      next: (now) => {
-        // Save the timer details for this ticket
-        this.activeTimer = {
-          ticketId: ticket.id,
-          subscription,
-        };
-      },
-      error: (err) => {
-        console.error('[TIMER] Error in timer:', err);
-        this.showError('Erreur avec le timer');
-      },
-    });
-
-    // Initial subscription so we don't have to wait 1 second for the first update
-    this.activeTimer = {
-      ticketId: ticket.id,
-      subscription,
-    };
-
-    // Initialize tracking for server updates (important for periodic saves)
-    this.lastServerUpdate[ticket.id] = timestamp.getTime();
-
-    // First update the workflow properties
-    this.ticketService
-      .updateTicketWorkflow(ticket.id, {
-        temporarilyStopped: false,
-        startWorkTime: wasTemporarilyStopped
-          ? ticket.startWorkTime
-          : timestamp.toISOString(),
-      })
-      .subscribe({
-        next: (response) => {
-          // Then update the status separately
-          this.ticketService
-            .directUpdateTicket(ticket.id, {
-              status: this.STATUS.IN_PROGRESS,
-            })
-            .subscribe({
-              next: () => {
-                console.log(
-                  '[TIMER] Successfully updated ticket workflow and status'
-                );
-                this.snackBar.open(
-                  wasTemporarilyStopped
-                    ? `Reprise du travail sur le ticket #${
-                        ticket.id
-                      } à partir de ${this.formatDurationHumanReadable(
-                        this.baseAccumulatedDuration
-                      )}`
-                    : `Début du travail sur le ticket #${ticket.id}`,
-                  'Fermer',
-                  { duration: 3000 }
-                );
-              },
-              error: (err) => {
-                console.error('[TIMER] Failed to update ticket status:', err);
-                // Still show success because the workflow was updated
-                this.snackBar.open(
-                  wasTemporarilyStopped
-                    ? `Reprise du travail sur le ticket #${ticket.id}`
-                    : `Début du travail sur le ticket #${ticket.id}`,
-                  'Fermer',
-                  { duration: 3000 }
-                );
-              },
-            });
-        },
-        error: (err) => {
-          console.error('[TIMER] Failed to start work:', err);
-          this.showError(
-            'Erreur: Impossible de démarrer le travail sur ce ticket'
-          );
-          this.loadTickets();
-
-          // Clean up the timer if we couldn't update the backend
-          if (this.activeTimer?.ticketId === ticket.id) {
-            this.activeTimer.subscription.unsubscribe();
-            this.activeTimer = null;
-            this.timerStartedAt = null;
-          }
-        },
-      });
-  }
-
-  onStopTemporarily(ticket: Ticket): void {
-    if (!this.activeTimer || this.activeTimer.ticketId !== ticket.id) {
-      this.showError('Aucun timer actif pour ce ticket');
-      return;
-    }
-
-    console.log('[TIMER] PAUSING work on ticket:', ticket.id);
-
-    // Stop the timer subscription
-    this.activeTimer.subscription.unsubscribe();
-
-    // Calculate final duration for this session
-    const now = new Date();
-    const currentSessionDuration = this.calculateExactSessionDuration(now);
-    const totalDuration = this.baseAccumulatedDuration + currentSessionDuration;
-
-    console.log('[TIMER] Pausing with calculated duration:', {
-      baseAccumulatedDuration: this.baseAccumulatedDuration,
-      currentSessionDuration,
-      totalDuration,
-      startedAt: this.timerStartedAt?.toISOString(),
-      now: now.toISOString(),
-    });
-
-    // Clean up timer state
+    
+    this.timerTicketId = null;
+    this.timerStartTime = null;
     this.activeTimer = null;
-    this.timerStartedAt = null;
-
-    // Update UI
-    const index = this.tickets.findIndex((t) => t.id === ticket.id);
-    if (index !== -1) {
-      this.tickets[index] = {
-        ...this.tickets[index],
-        temporarilyStopped: true,
-        workDuration: totalDuration,
-        finishWorkTime: now.toISOString(),
-        currentSessionDuration: 0, // Reset session counter
-      };
-
-      // Force change detection
-      this.tickets = [...this.tickets];
-    }
-
-    // Update both workflow properties in a single API call
-    this.ticketService
-      .updateTicketWorkflow(ticket.id, {
-        temporarilyStopped: true,
-        workDuration: totalDuration,
-        finishWorkTime: now.toISOString(),
-      })
-      .subscribe({
-        next: (response) => {
-          console.log(
-            '[TIMER] Successfully saved paused timer data:',
-            response
-          );
-          this.snackBar.open(
-            `Travail arrêté temporairement à ${this.formatDurationHumanReadable(
-              totalDuration
-            )}`,
-            'Fermer',
-            { duration: 3000 }
-          );
-        },
-        error: (err) => {
-          console.error('[TIMER] Failed to stop work:', err);
-          this.showError(
-            "Erreur: Impossible d'arrêter le travail sur ce ticket"
-          );
-          this.loadTickets();
-        },
-      });
+    
+    // Reset display
+    this.timerDisplay = '00:00:00';
   }
 
-  getWorkDuration(ticket: Ticket): string {
-    // Only recalculate for the active timer
-    if (this.activeTimer?.ticketId === ticket.id && this.timerStartedAt) {
-      // Calculate real-time duration based on activeTimer
-      const now = new Date();
-      const currentSessionDuration = this.calculateExactSessionDuration(now);
-      const totalDuration =
-        this.baseAccumulatedDuration + currentSessionDuration;
-
-      return `⏱️ ${this.formatDurationHumanReadable(totalDuration)}`;
-    }
-    // Use stored values for all other cases
-    else if (ticket.temporarilyStopped) {
-      return `⏸️ ${this.formatDurationHumanReadable(ticket.workDuration || 0)}`;
-    } else if (ticket.workFinished) {
-      return `✓ ${this.formatDurationHumanReadable(ticket.workDuration || 0)}`;
-    } else if (ticket.workDuration && ticket.workDuration > 0) {
-      // Show stored duration even if not active
-      return `⏲️ ${this.formatDurationHumanReadable(ticket.workDuration)}`;
-    } else {
-      return '⏲️ 00:00:00';
-    }
-  }
-
-  formatDuration(minutes: number): string {
-    if (!minutes) return '00:00:00';
-
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-
-    return `${hours.toString().padStart(2, '0')}:${remainingMinutes
-      .toString()
-      .padStart(2, '0')}:00`;
-  }
-
-  openResolveReportDialog(ticket: Ticket): void {
-    const dialogRef = this.dialog.open(ReportDialogComponent, {
-      width: '500px',
-      data: {
-        title: 'Marquer comme résolu',
-        action: 'résolvez',
-        isRequired: true,
-        placeholder: 'Veuillez décrire comment vous avez résolu ce ticket...',
-      },
-    });
-
-    dialogRef.afterClosed().subscribe((report) => {
-      if (report) {
-        console.log('[WorkflowAction] Resolve ticket with report:', ticket.id);
-
-        // STEP 1: Immediate UI update
-        const index = this.tickets.findIndex((t) => t.id === ticket.id);
-        if (index !== -1) {
-          this.tickets[index] = {
-            ...this.tickets[index],
-            status: this.STATUS.RESOLVED,
-            report: report,
-            workFinished: true,
-          };
-
-          // Force change detection
-          this.tickets = [...this.tickets];
-        }
-
-        // STEP 2: Server-side update - direct update
-        const updatedTicket: Partial<Ticket> = {
-          title: ticket.title,
-          description: ticket.description,
-          qualification: ticket.qualification || '',
-          project: ticket.project,
-          problemCategory: ticket.problemCategory,
-          priority: ticket.priority,
-          assignedToId: ticket.assignedToId,
-          attachment: ticket.attachment || '',
-          status: this.STATUS.RESOLVED,
-          report: report,
-          temporarilyStopped: false,
-          workFinished: true,
-        };
-
-        this.ticketService
-          .directUpdateTicket(ticket.id, updatedTicket)
-          .subscribe({
-            next: (response) => {
-              console.log(
-                '[WorkflowSuccess] Resolved ticket with report:',
-                response
-              );
-              this.snackBar.open(
-                'Ticket marqué comme résolu avec rapport',
-                'Fermer',
-                { duration: 3000 }
-              );
-            },
-            error: (err) => {
-              console.error(
-                '[WorkflowError] Failed to resolve ticket with report:',
-                err
-              );
-              this.snackBar.open(
-                'Erreur: Impossible de résoudre le ticket',
-                'Fermer',
-                { duration: 5000, panelClass: ['error-snackbar'] }
-              );
-
-              // Reload tickets to restore correct state
-              this.loadTickets();
-            },
-          });
-      }
-    });
-  }
-
-  onUnresolve(ticket: Ticket): void {
-    // Make sure the work is finished
-    if (!ticket.workFinished) {
-      this.snackBar.open(
-        "Vous devez d'abord terminer votre travail sur ce ticket",
-        'Fermer',
-        { duration: 3000 }
-      );
-      return;
-    }
-
-    const dialogRef = this.dialog.open(ReportDialogComponent, {
-      width: '500px',
-      data: {
-        title: 'Marquer comme non résolu',
-        action: 'marquez comme non résolu',
-        isRequired: true,
-        placeholder:
-          'Veuillez expliquer pourquoi le ticket ne peut pas être résolu...',
-      },
-    });
-
-    dialogRef.afterClosed().subscribe((report) => {
-      if (report) {
-        console.log('[WorkflowAction] Mark ticket as unresolved:', ticket.id);
-
-        // STEP 1: Immediate UI update
-        const index = this.tickets.findIndex((t) => t.id === ticket.id);
-        if (index !== -1) {
-          this.tickets[index] = {
-            ...this.tickets[index],
-            status: this.STATUS.UNRESOLVED,
-            report: report,
-            workFinished: true,
-          };
-
-          // Force change detection
-          this.tickets = [...this.tickets];
-        }
-
-        // STEP 2: Server-side update - direct update
-        const updatedTicket: Partial<Ticket> = {
-          title: ticket.title,
-          description: ticket.description,
-          qualification: ticket.qualification || '',
-          project: ticket.project,
-          problemCategory: ticket.problemCategory,
-          priority: ticket.priority,
-          assignedToId: ticket.assignedToId,
-          attachment: ticket.attachment || '',
-          status: this.STATUS.UNRESOLVED,
-          report: report,
-          temporarilyStopped: false,
-          workFinished: true,
-        };
-
-        this.ticketService
-          .directUpdateTicket(ticket.id, updatedTicket)
-          .subscribe({
-            next: (response) => {
-              console.log(
-                '[WorkflowSuccess] Marked ticket as unresolved:',
-                response
-              );
-              this.snackBar.open('Ticket marqué comme non résolu', 'Fermer', {
-                duration: 3000,
-              });
-            },
-            error: (err) => {
-              console.error(
-                '[WorkflowError] Failed to mark ticket as unresolved:',
-                err
-              );
-              this.snackBar.open(
-                'Erreur: Impossible de marquer le ticket comme non résolu',
-                'Fermer',
-                { duration: 5000, panelClass: ['error-snackbar'] }
-              );
-
-              // Reload tickets to restore correct state
-              this.loadTickets();
-            },
-          });
-      }
-    });
-  }
-
-  updateTicket(updatedTicket: Ticket, successMessage: string): void {
-    console.log('updateTicket called with:', updatedTicket);
-
-    this.ticketService.updateTicket(updatedTicket).subscribe({
-      next: (response) => {
-        console.log('Server response for updateTicket:', response);
-
-        // Find the ticket in the array and update it
-        const index = this.tickets.findIndex((t) => t.id === updatedTicket.id);
-        if (index !== -1) {
-          // Create a new reference to ensure change detection
-          this.tickets = [
-            ...this.tickets.slice(0, index),
-            { ...updatedTicket, ...response }, // Merge response with local changes
-            ...this.tickets.slice(index + 1),
-          ];
-
-          console.log('Updated tickets array:', this.tickets);
-        }
-
-        this.snackBar.open(successMessage, 'Fermer', {
-          duration: 3000,
-        });
-
-        // Force the component to refresh
-        setTimeout(() => this.loadTickets(), 500);
-      },
-      error: (err) => {
-        console.error('Error updating ticket:', err);
-        this.snackBar.open(
-          `Erreur lors de la mise à jour du ticket: ${
-            err.message || 'Unknown error'
-          }`,
-          'Fermer',
-          {
-            duration: 5000,
-            panelClass: ['error-snackbar'],
-          }
-        );
-      },
-    });
-  }
-
-  openCommentDialog(ticket: Ticket): void {
-    const dialogRef = this.dialog.open(CommentDialogComponent, {
-      width: '500px',
-      data: { ticket },
-    });
-
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result && result.updated) {
-        this.loadTickets();
-      }
-    });
-  }
-
-  showDescription(ticket: Ticket): void {
-    this.dialog.open(DescriptionDialogComponent, {
-      width: '500px',
-      data: { ticket },
-    });
-  }
-
-  formatDurationHumanReadable(seconds: number): string {
-    // Ensure seconds is a valid number
-    if (seconds === null || seconds === undefined || isNaN(seconds)) {
-      console.warn('[Timer] Invalid duration value:', seconds);
-      return '00:00:00';
-    }
-
-    // Ensure seconds is a positive integer
-    seconds = Math.max(0, Math.round(seconds));
-
-    // Convert to hours, minutes, seconds
-    const hours = Math.floor(seconds / 3600);
-    const remainingSeconds = seconds % 3600;
-    const minutes = Math.floor(remainingSeconds / 60);
-    const secs = remainingSeconds % 60;
-
-    // Format as HH:MM:SS
-    const hoursStr = hours.toString().padStart(2, '0');
-    const minutesStr = minutes.toString().padStart(2, '0');
-    const secondsStr = secs.toString().padStart(2, '0');
-
-    return `${hoursStr}:${minutesStr}:${secondsStr}`;
-  }
-
-  // For backward compatibility, remove after full refactoring
-  onPauseWorking(ticket: Ticket): void {
-    this.onStopTemporarily(ticket);
-  }
-
-  // For backward compatibility, remove after full refactoring
-  onWorkCompleted(ticket: Ticket): void {
-    this.onFinish(ticket);
-  }
-
-  // For backward compatibility, remove after full refactoring
-  onFinishWorking(ticket: Ticket): void {
-    this.onFinish(ticket);
-  }
-
-  onResolve(ticket: Ticket): void {
-    console.log('[WorkflowAction] Resolve ticket:', ticket.id);
-
-    // Open confirmation dialog to ask if the user wants to add a report
-    const confirmDialog = this.dialog.open(ConfirmationDialogComponent, {
-      width: '400px',
-      data: {
-        title: 'Résolution de ticket',
-        message:
-          'Souhaitez-vous ajouter un rapport détaillé pour expliquer la résolution?',
-        confirmText: 'Oui, ajouter un rapport',
-        cancelText: 'Non, résoudre sans rapport',
-      },
-    });
-
-    confirmDialog.afterClosed().subscribe((result) => {
-      if (result === true) {
-        // User wants to add a report
-        this.openResolveReportDialog(ticket);
-      } else if (result === false) {
-        // User doesn't want to add a report
-        this.resolveTicketWithoutReport(ticket);
-      }
-      // If dialog was dismissed (undefined), do nothing
-    });
-  }
-
-  resolveTicketWithoutReport(ticket: Ticket): void {
-    console.log('[WorkflowAction] Resolve ticket without report:', ticket.id);
-
-    // Add a simple comment
-    const comment = `${new Date().toLocaleString()} - Résolu sans rapport détaillé`;
-    const updatedCommentaire = `${ticket.commentaire || ''}\n${comment}`;
-
-    // STEP 1: Immediate UI update
-    const index = this.tickets.findIndex((t) => t.id === ticket.id);
-    if (index !== -1) {
-      this.tickets[index] = {
-        ...this.tickets[index],
-        status: this.STATUS.RESOLVED,
-        commentaire: updatedCommentaire,
-        workFinished: true,
-      };
-
-      // Force change detection
-      this.tickets = [...this.tickets];
-    }
-
-    // STEP 2: Server-side update - direct update
-    const updatedTicket: Partial<Ticket> = {
-      title: ticket.title,
-      description: ticket.description,
-      qualification: ticket.qualification || '',
-      project: ticket.project,
-      problemCategory: ticket.problemCategory,
-      priority: ticket.priority,
-      assignedToId: ticket.assignedToId,
-      attachment: ticket.attachment || '',
-      status: this.STATUS.RESOLVED,
-      commentaire: updatedCommentaire,
-      temporarilyStopped: false,
-      workFinished: true,
-    };
-
-    this.ticketService.directUpdateTicket(ticket.id, updatedTicket).subscribe({
-      next: (response) => {
-        console.log(
-          '[WorkflowSuccess] Resolved ticket without report:',
-          response
-        );
-        this.snackBar.open('Ticket marqué comme résolu', 'Fermer', {
-          duration: 3000,
-        });
-      },
-      error: (err) => {
-        console.error(
-          '[WorkflowError] Failed to resolve ticket without report:',
-          err
-        );
-        this.snackBar.open(
-          'Erreur: Impossible de résoudre le ticket',
-          'Fermer',
-          { duration: 5000, panelClass: ['error-snackbar'] }
-        );
-
-        // Reload tickets to restore correct state
-        this.loadTickets();
-      },
-    });
-  }
-
-  onResumeWorking(ticket: Ticket): void {
-    this.onStartWork(ticket);
-  }
-
-  // Add onFinish method with critical fixes
-  onFinish(ticket: Ticket): void {
-    // Check if there's an active timer for this ticket
-    const hasActiveTimer = this.activeTimer?.ticketId === ticket.id;
-
-    // Calculate final duration
-    let totalDuration = ticket.workDuration || 0;
-
-    // If there's an active timer, stop it and add its duration
-    if (hasActiveTimer && this.activeTimer) {
-      this.activeTimer.subscription.unsubscribe();
-
-      // Calculate final session duration
-      const now = new Date();
-      const currentSessionDuration = this.calculateExactSessionDuration(now);
-      totalDuration = this.baseAccumulatedDuration + currentSessionDuration;
-
-      console.log('[TIMER] FINISHING with calculated duration:', {
-        baseAccumulatedDuration: this.baseAccumulatedDuration,
-        currentSessionDuration,
-        totalDuration,
-        startedAt: this.timerStartedAt?.toISOString(),
-        now: now.toISOString(),
-      });
-
-      // Clean up timer state
-      this.activeTimer = null;
-      this.timerStartedAt = null;
-    }
-
-    const now = new Date();
-
-    // Update UI immediately
-    const index = this.tickets.findIndex((t) => t.id === ticket.id);
-    if (index !== -1) {
-      this.tickets[index] = {
-        ...this.tickets[index],
-        workFinished: true,
-        workDuration: totalDuration,
-        finishWorkTime: now.toISOString(),
-        currentSessionDuration: 0, // Reset session counter
-      };
-
-      // Force change detection
-      this.tickets = [...this.tickets];
-    }
-
-    // Use a two-step save process to avoid validation errors
-    // Step 1: Update the duration first
-    this.ticketService
-      .updateTicketWorkDuration(ticket.id, totalDuration)
-      .subscribe({
-        next: () => {
-          // Step 2: Update the status fields
-          this.ticketService
-            .directUpdateTicket(ticket.id, {
-              workFinished: true,
-              finishWorkTime: now.toISOString(),
-            })
-            .subscribe({
-              next: () => {
-                this.snackBar.open(
-                  `Travail terminé sur ce ticket (${this.formatDurationHumanReadable(
-                    totalDuration
-                  )})`,
-                  'Fermer',
-                  { duration: 3000 }
-                );
-              },
-              error: (err) => {
-                // Still show success if at least the duration was saved
-                console.error('[TIMER] Error updating finish status:', err);
-                this.snackBar.open(
-                  `Travail terminé sur ce ticket (${this.formatDurationHumanReadable(
-                    totalDuration
-                  )})`,
-                  'Fermer',
-                  { duration: 3000 }
-                );
-              },
-            });
-        },
-        error: (err) => {
-          console.error('[TIMER] Failed to save final duration:', err);
-          this.showError(
-            'Erreur: Impossible de terminer le travail sur ce ticket'
-          );
-          this.loadTickets();
-        },
-      });
-  }
-
-  // Add a manual refresh function for the user to try again
+  // Add missing methods referenced in the template
   refreshTickets(): void {
-    console.log('[CollaborateurTicketsComponent] Manual refresh requested');
-
-    // Show loading indicator
-    this.isLoading = true;
-
-    // Show a snackbar to indicate refresh is happening
-    this.snackBar.open('Actualisation des tickets en cours...', '', {
-      duration: 2000,
+    console.log('[CollaborateurTicketsComponent] Refreshing tickets');
+    this.loadTickets();
+  }
+  
+  getStatusClass(status: string): string {
+    status = status.toLowerCase();
+    if (status.includes('assigned') || status.includes('assigné')) {
+      return 'status-assigned';
+    } else if (status.includes('progress') || status.includes('cours')) {
+      return 'status-in-progress';
+    } else if (status.includes('resolved') || status.includes('résolu')) {
+      return 'status-resolved';
+    } else if (status.includes('unresolved') || status.includes('non résolu')) {
+      return 'status-unresolved';
+    }
+    return 'status-unknown';
+  }
+  
+  openDetailsDialog(ticket: Ticket): void {
+    this.dialog.open(TicketDetailsDialogComponent, {
+      width: '700px',
+      maxWidth: '90vw',
+      data: { ticket }
+    });
+  }
+  
+  openActionsDialog(ticket: Ticket): void {
+    const dialogRef = this.dialog.open(TicketActionsDialogComponent, {
+      width: '450px',
+      maxWidth: '90vw',
+      data: { ticket },
+      panelClass: 'ticket-actions-dialog'
     });
 
-    // Force clear any cached data
-    this.tickets = [];
-
-    // Load fresh data with delay to ensure UI updates
-    setTimeout(() => {
-      this.loadTickets();
-    }, 500);
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        // Handle actions returned from the dialog
+        if (result.action === 'viewDetails') {
+          this.openDetailsDialog(result.ticket);
+        } else if (result.action === 'refresh') {
+          this.loadTickets();
+        }
+      }
+    });
+  }
+  
+  openCommentDialog(ticket: Ticket): void {
+    // Open the comment dialog from admin components for consistent UI
+    this.dialog.open(CommentDialogComponent, {
+      width: '600px',
+      maxWidth: '95vw',
+      data: {
+        ticketId: ticket.id,
+        ticket: ticket
+      }
+    }).afterClosed().subscribe(result => {
+      if (result) {
+        // Refresh tickets list to show updated comment
+        this.loadTickets();
+      }
+    });
   }
 }

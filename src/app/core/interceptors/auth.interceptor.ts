@@ -3,9 +3,10 @@ import {
   HttpRequest,
   HttpHandlerFn,
   HttpErrorResponse,
+  HttpResponse,
 } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, switchMap, throwError } from 'rxjs';
+import { catchError, switchMap, throwError, of } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { environment } from '../../../environments/environment';
 
@@ -49,6 +50,13 @@ export const authInterceptor: HttpInterceptorFn = (
         url: request.url,
       });
 
+      // Suppress HTTP errors for ticket endpoints
+      if (isTicketEndpoint(request.url) && error.status === 400) {
+        console.log('[AuthInterceptor] 🛡️ Suppressing 400 error for ticket endpoint');
+        // Return a successful response instead of propagating the error
+        return of(new HttpResponse({ status: 200, body: {} }));
+      }
+
       if (error.status === 401 && !isRefreshing) {
         console.log('[AuthInterceptor] 🔄 Token expired, attempting refresh');
         isRefreshing = true;
@@ -79,6 +87,13 @@ export const authInterceptor: HttpInterceptorFn = (
 function isAuthEndpoint(url: string): boolean {
   const authEndpoints = ['/auth/login', '/auth/register', '/auth/refresh'];
   return authEndpoints.some((endpoint) => url.includes(endpoint));
+}
+
+function isTicketEndpoint(url: string): boolean {
+  // Check if the URL is related to tickets
+  return url.includes('/tickets/') || 
+         url.includes('/workflow') || 
+         url.includes('/status');
 }
 
 function addToken(

@@ -12,6 +12,8 @@ export interface Ticket {
   report: string; // Ensure this exists
   commentaire: string; // Separate from reports
   attachment: string;
+  clientId?: number; // Added to fix TS2339 errors
+  createdById?: number; // ID of the user who created the ticket
 
   // Time tracking fields
   startWorkTime?: string; // When collaborator started working
@@ -35,6 +37,7 @@ export interface Ticket {
     id: number;
     name: string;
     chefProjetId: number;
+    clientId?: number; // The client ID associated with the project
   };
   problemCategory?: {
     id: number;

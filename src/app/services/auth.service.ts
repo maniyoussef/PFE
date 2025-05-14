@@ -5,6 +5,7 @@ import { BehaviorSubject, Observable, throwError, of } from 'rxjs';
 import { catchError, tap, map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { User, AuthResponse } from '../models/user.model';
+import { NotificationService } from './notification.service';
 
 @Injectable({
   providedIn: 'root',
@@ -18,8 +19,14 @@ export class AuthService implements OnDestroy {
   public isAuthenticated$ = this.currentUser$.pipe(map((user) => !!user));
   private refreshInterval: ReturnType<typeof setInterval> | null = null;
   private tokenExpirationTime = 15 * 60 * 1000; // 15 minutes
+  private userDataLoaded = false;
+  private navigateAfterLoginUrl: string | null = null;
 
-  constructor(private http: HttpClient, private router: Router) {
+  constructor(
+    private http: HttpClient, 
+    private router: Router,
+    private notificationService: NotificationService
+  ) {
     console.log('[AuthService] Service initialized');
     this.loadStoredUser();
   }
@@ -30,24 +37,73 @@ export class AuthService implements OnDestroy {
     }
   }
 
+  // NEW METHOD: Preload user data to ensure it's available before components initialize
+  preloadUserData(): Promise<User | null> {
+    // If user is already loaded, return it immediately
+    if (this.currentUserSubject.value) {
+      console.log('[AuthService] User already loaded in memory');
+      return Promise.resolve(this.currentUserSubject.value);
+    }
+    
+    // If we've already tried loading and failed, don't try again
+    if (this.userDataLoaded) {
+      console.log('[AuthService] User data already attempted to load');
+      return Promise.resolve(this.currentUserSubject.value);
+    }
+    
+    // Try to load user data
+    return new Promise((resolve) => {
+      console.log('[AuthService] Preloading user data');
+      
+      // Try to load from storage
+      this.loadStoredUser();
+      
+      // Wait a short time for the load to complete
+      setTimeout(() => {
+        resolve(this.currentUserSubject.value);
+      }, 100);
+    });
+  }
+
   private loadStoredUser(): void {
     console.log('[AuthService] Loading stored user');
-    // Check both storage keys used by the different auth services
-    const storedUser =
-      localStorage.getItem('user') || localStorage.getItem('userData');
-    const token = localStorage.getItem('token');
-    const tokenExpiration = localStorage.getItem('tokenExpiration');
+    
+    try {
+      // Check both storage keys used by the different auth services
+      const storedUser =
+        localStorage.getItem('user') || localStorage.getItem('userData');
+      const token = localStorage.getItem('token');
+      const tokenExpiration = localStorage.getItem('tokenExpiration');
 
-    console.log('[AuthService] Stored data:', {
-      hasUser: !!storedUser,
-      hasToken: !!token,
-      tokenExpiration,
-      userDataKey: !!localStorage.getItem('userData'),
-      userKey: !!localStorage.getItem('user'),
-    });
+      console.log('[AuthService] Stored data:', {
+        hasUser: !!storedUser,
+        hasToken: !!token,
+        tokenExpiration,
+        userDataKey: !!localStorage.getItem('userData'),
+        userKey: !!localStorage.getItem('user'),
+      });
 
-    if (storedUser && token && tokenExpiration) {
-      const user = JSON.parse(storedUser);
+      if (!storedUser || !token) {
+        console.log('[AuthService] Missing user data or token');
+        this.userDataLoaded = true;
+        return;
+      }
+
+      let user: User;
+      try {
+        user = JSON.parse(storedUser);
+      } catch (error) {
+        console.error('[AuthService] Error parsing user data:', error);
+        this.userDataLoaded = true;
+        return;
+      }
+
+      if (!tokenExpiration) {
+        console.log('[AuthService] Missing token expiration');
+        this.userDataLoaded = true;
+        return;
+      }
+
       const expirationDate = new Date(tokenExpiration);
       const now = new Date();
 
@@ -64,6 +120,11 @@ export class AuthService implements OnDestroy {
         }
         if (!localStorage.getItem('userData')) {
           localStorage.setItem('userData', storedUser);
+        }
+
+        // Ensure user has roles in a consistent format
+        if (!user.roles && user.role && user.role.name) {
+          user.roles = [user.role.name.toUpperCase()];
         }
 
         this.currentUserSubject.next(user);
@@ -89,6 +150,11 @@ export class AuthService implements OnDestroy {
           },
         });
       }
+      
+      this.userDataLoaded = true;
+    } catch (error) {
+      console.error('[AuthService] Unexpected error in loadStoredUser:', error);
+      this.userDataLoaded = true;
     }
   }
 
@@ -112,70 +178,117 @@ export class AuthService implements OnDestroy {
 
   changePassword(oldPassword: string, newPassword: string): Observable<any> {
     return this.http
-      .post(`${this.apiUrl}/change-password`, { oldPassword, newPassword })
+      .post(`${this.apiUrl}/auth/change-password`, { oldPassword, newPassword })
       .pipe(
         catchError((error) => {
           console.error('Password change error:', error);
+          
+          // Handle 401 errors specifically for password change
+          if (error.status === 401) {
+            return throwError(() => new Error("Le mot de passe actuel est incorrect"));
+          }
+          
           return throwError(() => error);
         })
       );
   }
 
   login(email: string, password: string): Observable<AuthResponse> {
-    console.log('Login request initiated');
+    console.log('[AuthService] 🔐 Login request initiated');
     return this.http
       .post<AuthResponse>(`${this.apiUrl}/auth/login`, { email, password })
       .pipe(
         tap((response) => {
-          console.log('Login response received:', {
+          console.log('[AuthService] 🔐 Login response received:', {
             hasToken: !!response.token,
-            user: response.user,
-            fullResponse: response,
+            hasUser: !!response.user,
+            userId: response.user?.id,
+            userRole: response.user?.role?.name || 'No role name',
+            userRoles: response.user?.roles || 'No roles array',
           });
+          
           if (!response.token || !response.user) {
+            console.error('[AuthService] ❌ Invalid response format - missing token or user');
             throw new Error('Invalid response format');
           }
 
-          // CRITICAL FIX: Check all role formats for Chef Projet
-          const hasChefProjetRole =
+          // CRITICAL FIX: Ensure roles array exists
+          if (!response.user.roles) {
+            console.log('[AuthService] ⚠️ No roles array, creating empty one');
+            response.user.roles = [];
+          }
+
+          // CRITICAL FIX: Add role from role object to roles array if missing
+          if (response.user.role && response.user.role.name) {
+            const roleName = response.user.role.name;
+            if (!response.user.roles.includes(roleName)) {
+              console.log(`[AuthService] ⚠️ Adding role '${roleName}' from role object to roles array`);
+              response.user.roles.push(roleName);
+            }
+          }
+
+          // CRITICAL FIX: Handle USER/CLIENT roles consistently
+          const hasUserClientRole =
             (Array.isArray(response.user.roles) &&
               response.user.roles.some(
                 (role) =>
                   typeof role === 'string' &&
-                  (role === 'Chef Projet' ||
-                    role.toUpperCase() === 'CHEF PROJET')
+                  (role === 'USER' || 
+                   role === 'CLIENT' || 
+                   role.toUpperCase() === 'USER' ||
+                   role.toUpperCase() === 'CLIENT')
               )) ||
             (response.user.role &&
-              (response.user.role.name === 'Chef Projet' ||
-                response.user.role.name?.toUpperCase() === 'CHEF PROJET' ||
-                response.user.role.id === 3));
+              (response.user.role.name === 'USER' ||
+               response.user.role.name === 'CLIENT' ||
+               response.user.role.name?.toUpperCase() === 'USER' ||
+               response.user.role.name?.toUpperCase() === 'CLIENT' ||
+               response.user.role.id === 2));
 
-          if (hasChefProjetRole) {
-            console.log(
-              '[AuthService] 🔒 CRITICAL: Chef Projet role detected - direct handling'
-            );
+          if (hasUserClientRole) {
+            console.log('[AuthService] 🔒 USER/CLIENT role detected - direct handling');
+
+            // Ensure one of these roles is in the roles array
+            if (!response.user.roles.some(r => 
+                (typeof r === 'string') && 
+                (r === 'USER' || r === 'CLIENT' || r.toUpperCase() === 'USER' || r.toUpperCase() === 'CLIENT'))) {
+              console.log('[AuthService] ⚠️ Adding USER role to roles array');
+              response.user.roles.push('USER');
+            }
 
             // Store token data
             this.storeTokenData(response);
 
-            // Navigate directly to chef-projet dashboard with a delay to ensure storage completes
+            // Store role directly for faster access
+            localStorage.setItem('userRole', 'USER');
+
+            // Force role ID to be correct
+            if (response.user.role && response.user.role.id !== 2) {
+              console.log('[AuthService] ⚠️ Fixing role ID to 2 for USER/CLIENT');
+              response.user.role.id = 2;
+            }
+            
+            // Load notifications immediately after login
+            console.log('[AuthService] 🔔 Loading notifications for USER/CLIENT');
+            this.loadUserNotifications();
+
+            // Navigate directly to user dashboard with a delay
             setTimeout(() => {
-              console.log(
-                '[AuthService] 👨‍💼 CRITICAL: Force navigation to chef-projet dashboard'
-              );
-              this.router.navigate(['/chef-projet'], {
+              console.log('[AuthService] 👤 Force navigation to user dashboard');
+              this.router.navigate(['/user/dashboard'], {
                 replaceUrl: true,
-                state: { source: 'critical-chef-projet-fix' },
+                queryParams: { refresh: new Date().getTime() }
               });
             }, 100);
 
             return;
           }
 
+          // Continue with the rest of the login processing
           this.handleAuthentication(response);
         }),
         catchError((error) => {
-          console.error('Login pipeline error:', error);
+          console.error('[AuthService] ❌ Login pipeline error:', error);
           return throwError(() => error);
         })
       );
@@ -195,28 +308,102 @@ export class AuthService implements OnDestroy {
       // Store all token data using the dedicated method
       this.storeTokenData(response);
 
+      // Immediately load notifications for the user
+      console.log('[AuthService] 🔔 Loading notifications immediately after login');
+      this.loadUserNotifications();
+
       // CRITICAL CHECK: Handle Chef Projet role specifically to bypass all other logic
       const isChefProjet =
         (Array.isArray(response.user.roles) &&
           response.user.roles.some(
             (role) =>
               typeof role === 'string' &&
-              (role === 'Chef Projet' || role.toUpperCase() === 'CHEF PROJET')
+              (role === 'Chef Projet' || role.toUpperCase() === 'CHEF_PROJET' || role.toUpperCase() === 'CHEF PROJET')
           )) ||
         (response.user.role &&
+          typeof response.user.role === 'object' &&
+          response.user.role.name &&
           (response.user.role.name === 'Chef Projet' ||
-            response.user.role.name === 'CHEF PROJET' ||
-            response.user.role.id === 3));
+            response.user.role.name.toUpperCase() === 'CHEF_PROJET' ||
+            response.user.role.name.toUpperCase() === 'CHEF PROJET'));
 
       if (isChefProjet) {
-        console.log(
-          '[AuthService] 🚨 CRITICAL CHEF PROJET MATCH - Direct navigation'
-        );
-        // Force navigation to chef-projet dashboard
-        setTimeout(() => {
-          this.router.navigate(['/chef-projet'], { replaceUrl: true });
-        }, 100);
+        console.log('[AuthService] 🚨 Chef Projet detected, direct navigation');
+        this.navigateAfterLogin('/chef-projet/tickets');
         return;
+      }
+
+      // CRITICAL CHECK: Handle ADMIN role specifically
+      const isAdmin =
+        (Array.isArray(response.user.roles) &&
+          response.user.roles.some(
+            (role) =>
+              typeof role === 'string' &&
+              (role === 'Admin' || role.toUpperCase() === 'ADMIN')
+          )) ||
+        (response.user.role &&
+          typeof response.user.role === 'object' &&
+          response.user.role.name &&
+          (response.user.role.name === 'Admin' ||
+            response.user.role.name.toUpperCase() === 'ADMIN'));
+
+      if (isAdmin) {
+        console.log('[AuthService] 🚨 Admin detected, direct navigation');
+        this.navigateAfterLogin('/admin/dashboard');
+        return;
+      }
+
+      // CRITICAL CHECK: Handle USER/CLIENT role specifically
+      const isUser =
+        (Array.isArray(response.user.roles) &&
+          response.user.roles.some(
+            (role) =>
+              typeof role === 'string' &&
+              (role === 'User' || role.toUpperCase() === 'USER' || 
+               role === 'Client' || role.toUpperCase() === 'CLIENT')
+          )) ||
+        (response.user.role &&
+          typeof response.user.role === 'object' &&
+          response.user.role.name &&
+          (response.user.role.name === 'User' ||
+            response.user.role.name.toUpperCase() === 'USER' ||
+            response.user.role.name === 'Client' ||
+            response.user.role.name.toUpperCase() === 'CLIENT'));
+
+      if (isUser) {
+        console.log('[AuthService] 🚨 User/Client detected, direct navigation');
+        this.navigateAfterLogin('/user/tickets');
+        return;
+      }
+
+      // Determine user's role for navigation
+      let roleName = '';
+
+      // Try to get role from roles array first (most reliable)
+      if (Array.isArray(response.user.roles) && response.user.roles.length > 0) {
+        // Get the first role as the primary role
+        const primaryRole = response.user.roles[0];
+        roleName = typeof primaryRole === 'string' ? primaryRole.toUpperCase() : '';
+        
+        console.log('[AuthService] Using role from roles array:', roleName);
+
+        // Direct role checks based on role name
+        if (roleName === 'ADMIN') {
+          this.navigateAfterLogin('/admin/dashboard');
+          return;
+        }
+        if (roleName === 'USER' || roleName === 'CLIENT') {
+          this.navigateAfterLogin('/user/tickets');
+          return;
+        }
+        if (roleName === 'CHEF PROJET' || roleName === 'CHEF_PROJET') {
+          this.navigateAfterLogin('/chef-projet/tickets');
+          return;
+        }
+        if (roleName === 'COLLABORATEUR') {
+          this.navigateAfterLogin('/collaborateur/tickets');
+          return;
+        }
       }
 
       // PRIORITY CHECK: Check for Chef Projet role in any format first
@@ -531,6 +718,8 @@ export class AuthService implements OnDestroy {
     localStorage.removeItem('user');
     localStorage.removeItem('userData');
     localStorage.removeItem('tokenExpiration');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userRole');
 
     // Clear timers
     if (this.tokenExpirationTimer) {
@@ -595,15 +784,27 @@ export class AuthService implements OnDestroy {
   private normalizeRoleName(role: string): string {
     if (!role) return '';
 
-    // CRITICAL FIX: Direct Chef Projet detection for any format
-    if (
-      role.trim().toUpperCase() === 'CHEF PROJET' ||
-      role.trim().toUpperCase() === 'CHEF_PROJET'
-    ) {
-      console.log(
-        `[AuthService] 🔐 Critical Chef Projet role normalization: "${role}" -> "CHEF_PROJET"`
-      );
+    // Convert role to uppercase for comparison
+    const upperRole = role.trim().toUpperCase();
+    
+    // CRITICAL FIX: Handle Chef Projet role consistently
+    if (upperRole === 'CHEF PROJET' || upperRole === 'CHEF_PROJET' || upperRole === 'CHEFPROJET') {
       return 'CHEF_PROJET';
+    }
+    
+    // Handle ADMIN role
+    if (upperRole === 'ADMIN' || upperRole === 'ADMINISTRATOR') {
+      return 'ADMIN';
+    }
+    
+    // Handle USER/CLIENT roles
+    if (upperRole === 'USER' || upperRole === 'CLIENT') {
+      return upperRole;
+    }
+    
+    // Handle COLLABORATEUR role
+    if (upperRole === 'COLLABORATEUR') {
+      return 'COLLABORATEUR';
     }
 
     // Normalize by removing spaces, converting to uppercase, and handling French accents
@@ -614,7 +815,6 @@ export class AuthService implements OnDestroy {
       .replace(/[\u0300-\u036f]/g, '') // Remove diacritics (accents)
       .toUpperCase();
 
-    console.log(`[AuthService] Normalized role: "${role}" -> "${normalized}"`);
     return normalized;
   }
 
@@ -639,90 +839,63 @@ export class AuthService implements OnDestroy {
       return false;
     }
 
+    // CRITICAL HOTFIX: If USER or CLIENT role is required, check for either one
+    if (requiredRole.toUpperCase() === 'USER' || requiredRole.toUpperCase() === 'CLIENT') {
+      // First check direct USER role match
+      const hasUserRole = this.checkSpecificRole(currentUser, 'USER');
+      // Then check direct CLIENT role match
+      const hasClientRole = this.checkSpecificRole(currentUser, 'CLIENT');
+      
+      if (hasUserRole || hasClientRole) {
+        console.log('[AuthService] ✅ USER/CLIENT role matched');
+        return true;
+      }
+    }
+
     // CRITICAL FIX: Direct check for Chef Projet role
     if (
       requiredRole.toUpperCase() === 'CHEF_PROJET' ||
       requiredRole.toUpperCase() === 'CHEF PROJET'
     ) {
-      // Check if the user has a "CHEF PROJET" role in any format
-      if (Array.isArray(currentUser.roles)) {
-        const hasChefProjetInRoles = currentUser.roles.some(
-          (role) =>
-            typeof role === 'string' &&
-            (role === 'Chef Projet' || role.toUpperCase() === 'CHEF PROJET')
-        );
-
-        if (hasChefProjetInRoles) {
-          console.log('[AuthService] ✅ CHEF PROJET found in roles array');
-          return true;
-        }
-      }
-
-      // Check for Chef Projet in role object
+      // First check role object if it exists
       if (currentUser.role) {
-        if (currentUser.role.id === 3) {
-          console.log('[AuthService] ✅ CHEF PROJET matched by role ID (3)');
-          return true;
-        }
-
         if (
+          currentUser.role.id === 3 ||
           currentUser.role.name === 'Chef Projet' ||
-          currentUser.role.name === 'CHEF PROJET'
+          currentUser.role.name?.toUpperCase() === 'CHEF PROJET'
         ) {
-          console.log('[AuthService] ✅ CHEF PROJET matched by name');
-          return true;
-        }
-
-        // Partial match check
-        const roleName = currentUser.role.name || '';
-        if (
-          roleName.includes('Chef') ||
-          roleName.includes('CHEF') ||
-          roleName.includes('Projet') ||
-          roleName.includes('PROJET')
-        ) {
-          console.log('[AuthService] ✅ CHEF PROJET matched by partial name');
+          console.log('[AuthService] ✅ Chef Projet role matched from role object');
           return true;
         }
       }
-    }
 
-    // Special case for Chef Projet
-    if (requiredRole.toUpperCase() === 'CHEF_PROJET') {
-      // Check in roles array
+      // Then check roles array if it exists
       if (currentUser.roles && Array.isArray(currentUser.roles)) {
         const hasChefProjetRole = currentUser.roles.some(
           (role) =>
             typeof role === 'string' &&
-            (role.toUpperCase() === 'CHEF PROJET' ||
-              role.toUpperCase() === 'CHEF_PROJET')
+            (role === 'Chef Projet' || role.toUpperCase() === 'CHEF PROJET')
         );
-
         if (hasChefProjetRole) {
-          console.log(
-            '[AuthService] ✅ Chef Projet role matched directly from roles array'
-          );
+          console.log('[AuthService] ✅ Chef Projet role matched from roles array');
           return true;
         }
       }
-
-      // Check in role object
-      if (currentUser.role && currentUser.role.name) {
-        const roleName = currentUser.role.name.toUpperCase();
-        if (roleName === 'CHEF PROJET' || roleName === 'CHEF_PROJET') {
-          console.log(
-            '[AuthService] ✅ Chef Projet role matched from role object'
-          );
-          return true;
-        }
-      }
-
-      // Check by role ID (3 for Chef Projet)
-      if (currentUser.role && currentUser.role.id === 3) {
-        console.log('[AuthService] ✅ Chef Projet role matched by ID (3)');
+    }
+    
+    // CRITICAL FIX: Direct check for ADMIN role
+    if (
+      requiredRole.toUpperCase() === 'ADMIN'
+    ) {
+      if (this.checkSpecificRole(currentUser, 'ADMIN')) {
+        console.log('[AuthService] ✅ ADMIN role matched');
         return true;
       }
     }
+
+    // CRITICAL FIX: Normalize the required role for comparison
+    const normalizedRequiredRole = requiredRole.toUpperCase();
+    console.log('[AuthService] Normalized role:', normalizedRequiredRole);
 
     // First try checking the roles array (which is the format from the backend)
     if (currentUser.roles && Array.isArray(currentUser.roles)) {
@@ -783,6 +956,77 @@ export class AuthService implements OnDestroy {
     );
     return false;
   }
+  
+  // Helper method to check for a specific role in all possible locations
+  private checkSpecificRole(user: User, roleName: string): boolean {
+    const normalizedRoleName = roleName.toUpperCase();
+    
+    // Check in role object
+    if (user.role) {
+      if (
+        user.role.name?.toUpperCase() === normalizedRoleName ||
+        (user.role.id === 1 && normalizedRoleName === 'ADMIN') ||
+        (user.role.id === 2 && (normalizedRoleName === 'USER' || normalizedRoleName === 'CLIENT')) ||
+        (user.role.id === 3 && normalizedRoleName === 'CHEF_PROJET') ||
+        (user.role.id === 4 && normalizedRoleName === 'COLLABORATEUR')
+      ) {
+        console.log(`[AuthService] ✅ ${roleName} role matched from role object`);
+        return true;
+      }
+    }
+    
+    // Check in roles array
+    if (user.roles && Array.isArray(user.roles)) {
+      const hasRole = user.roles.some(
+        (role) => 
+          typeof role === 'string' && 
+          (role.toUpperCase() === normalizedRoleName || 
+           (normalizedRoleName === 'USER' && role.toUpperCase() === 'CLIENT') ||
+           (normalizedRoleName === 'CLIENT' && role.toUpperCase() === 'USER'))
+      );
+      
+      if (hasRole) {
+        console.log(`[AuthService] ✅ ${roleName} role matched from roles array`);
+        return true;
+      }
+    }
+    
+    // Check in localStorage as last resort
+    try {
+      const storedRoles = localStorage.getItem('userRoles');
+      if (storedRoles) {
+        const parsedRoles = JSON.parse(storedRoles);
+        if (Array.isArray(parsedRoles)) {
+          const hasRole = parsedRoles.some(
+            (role) => 
+              typeof role === 'string' && 
+              (role.toUpperCase() === normalizedRoleName ||
+               (normalizedRoleName === 'USER' && role.toUpperCase() === 'CLIENT') ||
+               (normalizedRoleName === 'CLIENT' && role.toUpperCase() === 'USER'))
+          );
+          
+          if (hasRole) {
+            console.log(`[AuthService] ✅ ${roleName} role found in localStorage`);
+            return true;
+          }
+        }
+      }
+      
+      // Check direct role storage
+      const storedRole = localStorage.getItem('userRole');
+      if (storedRole && 
+          (storedRole.toUpperCase() === normalizedRoleName ||
+           (normalizedRoleName === 'USER' && storedRole.toUpperCase() === 'CLIENT') ||
+           (normalizedRoleName === 'CLIENT' && storedRole.toUpperCase() === 'USER'))) {
+        console.log(`[AuthService] ✅ ${roleName} role found in localStorage userRole`);
+        return true;
+      }
+    } catch (e) {
+      console.error(`[AuthService] Error checking localStorage for ${roleName} role:`, e);
+    }
+    
+    return false;
+  }
 
   navigateByRole(role: any): void {
     // More detailed logging to track the role navigation process
@@ -802,7 +1046,22 @@ export class AuthService implements OnDestroy {
       console.log(
         '[AuthService] ⚡ CHEF PROJET detected - emergency direct navigation'
       );
-      this.router.navigate(['/chef-projet'], { replaceUrl: true });
+      this.router.navigate(['/chef-projet/tickets'], { 
+        replaceUrl: true,
+        queryParams: { refresh: new Date().getTime() }
+      });
+      return;
+    }
+    
+    // CRITICAL IMMEDIATE FIX - Direct check for "USER" or "CLIENT" string
+    if (roleName === 'USER' || roleName === 'CLIENT') {
+      console.log(
+        '[AuthService] ⚡ USER/CLIENT detected - emergency direct navigation'
+      );
+      this.router.navigate(['/user/dashboard'], { 
+        replaceUrl: true,
+        queryParams: { refresh: new Date().getTime() }
+      });
       return;
     }
 
@@ -818,8 +1077,9 @@ export class AuthService implements OnDestroy {
           return;
         case 2: // User/Client role ID
           console.log('[AuthService] 👤 Navigating to client dashboard by ID');
-          this.router.navigate(['/client'], {
+          this.router.navigate(['/user/dashboard'], {
             replaceUrl: true,
+            queryParams: { refresh: new Date().getTime() },
             state: { source: 'login', timestamp },
           });
           return;
@@ -827,8 +1087,9 @@ export class AuthService implements OnDestroy {
           console.log(
             '[AuthService] 👷 Navigating to chef projet dashboard by ID'
           );
-          this.router.navigate(['/chef-projet'], {
+          this.router.navigate(['/chef-projet/tickets'], {
             replaceUrl: true,
+            queryParams: { refresh: new Date().getTime() },
             state: { source: 'login', timestamp },
           });
           return;
@@ -998,97 +1259,90 @@ export class AuthService implements OnDestroy {
   }
 
   storeTokenData(response: AuthResponse): void {
-    if (!response.token || !response.user) {
-      console.error('[AuthService] Invalid response format for token storage');
-      throw new Error('Invalid response format');
-    }
-
     try {
-      const now = new Date();
-      const expirationDate = new Date(now.getTime() + this.tokenExpirationTime);
-
-      // Validate the expiration date
-      if (isNaN(expirationDate.getTime())) {
-        throw new Error('Invalid expiration date calculated');
+      // Make sure we have all required data
+      if (!response.token || !response.user) {
+        console.error('[AuthService] Missing token or user data');
+        return;
       }
-
-      // Ensure consistent role formats
-      let userToStore = { ...response.user };
-
-      // Special handling for Chef Projet role
-      if (Array.isArray(userToStore.roles)) {
-        for (let i = 0; i < userToStore.roles.length; i++) {
-          const role = userToStore.roles[i];
-          if (
-            typeof role === 'string' &&
-            role.toUpperCase() === 'CHEF PROJET'
-          ) {
-            console.log(
-              '[AuthService] Preserving Chef Projet role in roles array'
-            );
-            // Don't uppercase Chef Projet to preserve exact format
-          } else if (typeof role === 'string') {
-            userToStore.roles[i] = role.toUpperCase();
+      
+      // Create a safe copy of the user data
+      const user = { ...response.user };
+      const token = response.token;
+      const refreshToken = response.refreshToken || '';
+      
+      // Normalize roles for consistent handling
+      if (Array.isArray(user.roles)) {
+        // Make a copy of the roles array with normalized names
+        const normalizedRoles = user.roles.map(role => {
+          if (typeof role === 'string') {
+            return this.normalizeRoleName(role);
           }
+          return role;
+        });
+        
+        // Replace the roles array
+        user.roles = normalizedRoles;
+        
+        // Store roles for quick access
+        localStorage.setItem('userRoles', JSON.stringify(normalizedRoles));
+      } else if (!user.roles) {
+        user.roles = [];
+      }
+      
+      // Ensure there's a role if it's present
+      if (user.role && typeof user.role === 'object' && user.role.name) {
+        const normalizedRoleName = this.normalizeRoleName(user.role.name);
+        // Store main role separately for quick access
+        localStorage.setItem('userRole', normalizedRoleName);
+        
+        // Add this role to the roles array if not present
+        if (Array.isArray(user.roles) && !user.roles.includes(normalizedRoleName)) {
+          user.roles.push(normalizedRoleName);
+          localStorage.setItem('userRoles', JSON.stringify(user.roles));
         }
-        console.log(
-          '[AuthService] Normalized roles array for storage:',
-          userToStore.roles
-        );
       }
-
-      if (userToStore.role && typeof userToStore.role.name === 'string') {
-        // Special handling for Chef Projet role
-        if (userToStore.role.name.toUpperCase() === 'CHEF PROJET') {
-          console.log(
-            '[AuthService] Preserving Chef Projet role in role object'
-          );
-          // Keep original format
-        } else {
-          userToStore.role.name = userToStore.role.name.toUpperCase();
-          console.log(
-            '[AuthService] Normalized role name for storage:',
-            userToStore.role.name
-          );
-        }
+      
+      // Calculate token expiration - default to 24 hours if not specified
+      const expiresInMs = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+      const expirationDate = new Date(new Date().getTime() + expiresInMs);
+      const expirationString = expirationDate.toISOString();
+      
+      // Store token data
+      localStorage.setItem('token', token);
+      localStorage.setItem('tokenExpiration', expirationString);
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
       }
-
-      // Serialize user data once to ensure consistency
-      const userData = JSON.stringify(userToStore);
-
-      // Store all auth-related data
-      localStorage.setItem('token', response.token);
-      if (response.refreshToken) {
-        localStorage.setItem('refreshToken', response.refreshToken);
+      
+      // Store user data
+      localStorage.setItem('userData', JSON.stringify(user));
+      localStorage.setItem('user', JSON.stringify(user)); // For compatibility
+      
+      // Store user ID separately for quick access
+      if (user.id) {
+        localStorage.setItem('userId', user.id.toString());
       }
-      localStorage.setItem('tokenExpiration', expirationDate.toISOString());
-
-      // Store in both keys for cross-service compatibility
-      localStorage.setItem('user', userData);
-      localStorage.setItem('userData', userData);
-
-      console.log(
-        '[AuthService] User data stored in both storage keys for compatibility'
-      );
-
-      // Update the current user subject
-      this.currentUserSubject.next(userToStore);
-
-      // Setup auto refresh
-      this.autoRefreshToken(this.tokenExpirationTime);
-
-      console.log('[AuthService] Stored auth data:', {
-        hasToken: true,
-        expiration: expirationDate,
-        user: {
-          id: userToStore.id,
-          role: userToStore.role,
-          roles: userToStore.roles,
-        },
-      });
+      
+      // Store user name if available
+      if (user.name) {
+        localStorage.setItem('userName', user.name);
+      } else if (user.email) {
+        localStorage.setItem('userName', user.email);
+      }
+      
+      console.log('[AuthService] 💾 Storing authentication data:');
+      console.log(`- User data length: ${JSON.stringify(user).length}`);
+      console.log(`- Token length: ${token.length}`);
+      console.log(`- Expiration: ${expirationDate}`);
+      
+      // Update current user
+      this.currentUserSubject.next(user);
+      
+      // Set up token refresh
+      this.setupTokenRefresh();
     } catch (error) {
-      console.error('[AuthService] Error storing token data:', error);
-      throw error;
+      console.error('[AuthService] 🚨 Error storing token data:', error);
     }
   }
 
@@ -1151,7 +1405,7 @@ export class AuthService implements OnDestroy {
 
         // If that didn't work, try direct approach
         if (!this.currentUserSubject.getValue()) {
-          const storedUserString = localStorage.getItem('user');
+          const storedUserString = localStorage.getItem('user') || localStorage.getItem('userData');
 
           if (storedUserString) {
             const storedUser = JSON.parse(storedUserString);
@@ -1161,9 +1415,22 @@ export class AuthService implements OnDestroy {
                 id: storedUser.id,
                 hasRole: !!storedUser.role,
                 role: storedUser.role,
+                roles: storedUser.roles,
                 timestamp: new Date().toISOString(),
               }
             );
+
+            // Special handling for Chef Projet role
+            if (storedUser.role && storedUser.role.id === 3) {
+              console.log('[AuthService] 🔑 Chef Projet role detected by ID');
+              
+              // Ensure roles array exists and contains Chef Projet
+              if (!storedUser.roles) {
+                storedUser.roles = ['Chef Projet'];
+              } else if (!storedUser.roles.includes('Chef Projet')) {
+                storedUser.roles.push('Chef Projet');
+              }
+            }
 
             // Update the BehaviorSubject with the stored user
             this.currentUserSubject.next(storedUser);
@@ -1213,6 +1480,354 @@ export class AuthService implements OnDestroy {
       console.log(
         '[AuthService] ✅ User already in memory, no need to restore'
       );
+    }
+  }
+
+  /**
+   * Special method to ensure admin routes work correctly
+   * This is called from the route guard and app.routes.ts
+   */
+  ensureAdminAccess(): boolean {
+    console.log('[AuthService] 👑 Ensuring admin access...');
+    
+    // First try to restore user from storage if needed
+    this.restoreUserFromStorage();
+    
+    // Check if we have a current user
+    const currentUser = this.currentUserSubject.getValue();
+    if (!currentUser) {
+      console.log('[AuthService] ❌ No user found for admin access');
+      
+      // Last resort: Check localStorage directly
+      try {
+        const storedRoles = localStorage.getItem('userRoles');
+        if (storedRoles) {
+          const parsedRoles = JSON.parse(storedRoles);
+          if (Array.isArray(parsedRoles)) {
+            const hasAdminRole = parsedRoles.some(
+              (role) => typeof role === 'string' && role.toUpperCase() === 'ADMIN'
+            );
+            if (hasAdminRole) {
+              console.log('[AuthService] ✅ Admin role found in localStorage');
+              return true;
+            }
+          }
+        }
+        
+        // Also check if role is stored directly
+        const storedRole = localStorage.getItem('userRole');
+        if (storedRole && storedRole.toUpperCase() === 'ADMIN') {
+          console.log('[AuthService] ✅ Admin role found in localStorage userRole');
+          return true;
+        }
+        
+        // Try to get user from localStorage and check role
+        const storedUser = localStorage.getItem('userData') || localStorage.getItem('user');
+        if (storedUser) {
+          try {
+            const userData = JSON.parse(storedUser);
+            if (userData.role && (userData.role.id === 1 || userData.role.name?.toUpperCase() === 'ADMIN')) {
+              console.log('[AuthService] ✅ Admin role found in stored user data');
+              return true;
+            }
+            if (Array.isArray(userData.roles) && userData.roles.some((r: any) => typeof r === 'string' && r.toUpperCase() === 'ADMIN')) {
+              console.log('[AuthService] ✅ Admin role found in stored user roles');
+              return true;
+            }
+          } catch (e) {
+            console.error('[AuthService] Error parsing stored user data:', e);
+          }
+        }
+      } catch (e) {
+        console.error('[AuthService] Error checking localStorage for admin role:', e);
+      }
+      
+      return false;
+    }
+    
+    // Check for admin role in any format
+    const hasAdminRole = this.hasRole('ADMIN');
+    
+    if (hasAdminRole) {
+      console.log('[AuthService] ✅ Admin role confirmed');
+      return true;
+    }
+    
+    // Additional fallback checks for admin
+    if (Array.isArray(currentUser.roles)) {
+      const adminRoleFound = currentUser.roles.some(
+        role => typeof role === 'string' && 
+               (role === 'Admin' || role.toUpperCase() === 'ADMIN')
+      );
+      
+      if (adminRoleFound) {
+        console.log('[AuthService] ✅ Admin role found in roles array');
+        return true;
+      }
+    }
+    
+    // Check role object if available
+    if (currentUser.role) {
+      const roleName = typeof currentUser.role === 'string' 
+        ? currentUser.role 
+        : currentUser.role.name || '';
+      
+      if (roleName === 'Admin' || roleName.toUpperCase() === 'ADMIN') {
+        console.log('[AuthService] ✅ Admin role found in role object');
+        return true;
+      }
+      
+      // Check by role ID
+      if (currentUser.role.id === 1) {
+        console.log('[AuthService] ✅ Admin role confirmed by ID');
+        return true;
+      }
+    }
+    
+    console.log('[AuthService] ❌ Admin role not found');
+    return false;
+  }
+
+  private navigateAfterLogin(targetUrl: string): void {
+    console.log('[AuthService] 🚀 Preparing navigation after login to:', targetUrl);
+    
+    // Store the target URL for reference
+    this.navigateAfterLoginUrl = targetUrl;
+    
+    // Use setTimeout to ensure all storage operations complete before navigation
+    setTimeout(() => {
+      console.log('[AuthService] 🚀 Now navigating to:', targetUrl);
+      this.router.navigate([targetUrl], { 
+        replaceUrl: true,
+        queryParams: { refresh: new Date().getTime() } // Force refresh
+      });
+    }, 100);
+  }
+
+  /**
+   * Special method to ensure collaborateur routes work correctly
+   * This is called from the route guard and app.routes.ts
+   */
+  ensureCollaborateurAccess(): boolean {
+    console.log('[AuthService] 👷 Ensuring collaborateur access...');
+    
+    // First try to restore user from storage if needed
+    this.restoreUserFromStorage();
+    
+    // Check if we have a current user
+    const currentUser = this.currentUserSubject.getValue();
+    if (!currentUser) {
+      console.log('[AuthService] ❌ No user found for collaborateur access');
+      return false;
+    }
+    
+    // Check for collaborateur role in any format
+    const hasCollaborateurRole = this.hasRole('COLLABORATEUR');
+    
+    if (hasCollaborateurRole) {
+      console.log('[AuthService] ✅ Collaborateur role confirmed');
+      return true;
+    }
+    
+    // Additional fallback checks for collaborateur
+    if (Array.isArray(currentUser.roles)) {
+      const collaborateurRoleFound = currentUser.roles.some(
+        role => typeof role === 'string' && 
+               (role === 'Collaborateur' || role.toUpperCase() === 'COLLABORATEUR')
+      );
+      
+      if (collaborateurRoleFound) {
+        console.log('[AuthService] ✅ Collaborateur role found in roles array');
+        return true;
+      }
+    }
+    
+    // Check role object if available
+    if (currentUser.role) {
+      const roleName = typeof currentUser.role === 'string' 
+        ? currentUser.role 
+        : currentUser.role.name || '';
+      
+      if (roleName === 'Collaborateur' || roleName.toUpperCase() === 'COLLABORATEUR') {
+        console.log('[AuthService] ✅ Collaborateur role found in role object');
+        return true;
+      }
+      
+      // Check by role ID
+      if (currentUser.role.id === 4) {
+        console.log('[AuthService] ✅ Collaborateur role confirmed by ID');
+        return true;
+      }
+    }
+    
+    console.log('[AuthService] ❌ Collaborateur role not found');
+    return false;
+  }
+
+  /**
+   * Special method to ensure user/client routes work correctly
+   * This is called from the route guard and app.routes.ts
+   */
+  ensureUserClientAccess(): boolean {
+    console.log('[AuthService] 👤 Ensuring user/client access...');
+    
+    // First try to restore user from storage if needed
+    this.restoreUserFromStorage();
+    
+    // Check if we have a current user
+    const currentUser = this.currentUserSubject.getValue();
+    if (!currentUser) {
+      console.log('[AuthService] ❌ No user found for user/client access');
+      
+      // Last resort: Check localStorage directly
+      try {
+        // Check for USER or CLIENT in stored roles
+        const storedRoles = localStorage.getItem('userRoles');
+        if (storedRoles) {
+          try {
+            const parsedRoles = JSON.parse(storedRoles);
+            if (Array.isArray(parsedRoles)) {
+              const hasUserClientRole = parsedRoles.some(
+                (role) => typeof role === 'string' && 
+                         (role.toUpperCase() === 'USER' || role.toUpperCase() === 'CLIENT')
+              );
+              if (hasUserClientRole) {
+                console.log('[AuthService] ✅ User/Client role found in localStorage');
+                return true;
+              }
+            }
+          } catch (e) {
+            console.error('[AuthService] Error parsing stored roles:', e);
+          }
+        }
+        
+        // Also check if role is stored directly
+        const storedRole = localStorage.getItem('userRole');
+        if (storedRole && 
+            (storedRole.toUpperCase() === 'USER' || storedRole.toUpperCase() === 'CLIENT')) {
+          console.log('[AuthService] ✅ User/Client role found in localStorage userRole');
+          return true;
+        }
+        
+        // Try to get user from localStorage and check role
+        const storedUser = localStorage.getItem('userData') || localStorage.getItem('user');
+        if (storedUser) {
+          try {
+            const userData = JSON.parse(storedUser);
+            
+            // Check role by ID
+            if (userData.role && userData.role.id === 2) {
+              console.log('[AuthService] ✅ User/Client role found in stored user data by ID');
+              return true;
+            }
+            
+            // Check role by name
+            if (userData.role && 
+                (userData.role.name?.toUpperCase() === 'USER' || 
+                 userData.role.name?.toUpperCase() === 'CLIENT')) {
+              console.log('[AuthService] ✅ User/Client role found in stored user data by name');
+              return true;
+            }
+            
+            // Check roles array
+            if (Array.isArray(userData.roles)) {
+              const hasUserClientRole = userData.roles.some(
+                (r: any) => typeof r === 'string' && 
+                           (r.toUpperCase() === 'USER' || r.toUpperCase() === 'CLIENT')
+              );
+              if (hasUserClientRole) {
+                console.log('[AuthService] ✅ User/Client role found in stored user roles');
+                return true;
+              }
+            }
+          } catch (e) {
+            console.error('[AuthService] Error parsing stored user data:', e);
+          }
+        }
+      } catch (e) {
+        console.error('[AuthService] Error checking localStorage for user/client role:', e);
+      }
+      
+      return false;
+    }
+    
+    // Check for user/client role in any format
+    const hasUserRole = this.hasRole('USER');
+    
+    if (hasUserRole) {
+      console.log('[AuthService] ✅ User/Client role confirmed through hasRole');
+      return true;
+    }
+    
+    // Direct check in the roles array as fallback
+    if (Array.isArray(currentUser.roles)) {
+      const userClientRoleFound = currentUser.roles.some(
+        role => typeof role === 'string' && 
+               (role === 'User' || 
+                role === 'Client' || 
+                role.toUpperCase() === 'USER' ||
+                role.toUpperCase() === 'CLIENT')
+      );
+      
+      if (userClientRoleFound) {
+        console.log('[AuthService] ✅ User/Client role found in roles array');
+        return true;
+      }
+    }
+    
+    // Check role object if available
+    if (currentUser.role) {
+      const roleName = typeof currentUser.role === 'string' 
+        ? currentUser.role 
+        : currentUser.role.name || '';
+      
+      if (roleName === 'User' || 
+          roleName === 'Client' ||
+          roleName.toUpperCase() === 'USER' ||
+          roleName.toUpperCase() === 'CLIENT') {
+        console.log('[AuthService] ✅ User/Client role found in role object');
+        return true;
+      }
+      
+      // Check by role ID
+      if (currentUser.role.id === 2) {
+        console.log('[AuthService] ✅ User/Client role confirmed by ID');
+        return true;
+      }
+    }
+    
+    console.log('[AuthService] ❌ User/Client role not found');
+    return false;
+  }
+
+  /**
+   * Load notifications immediately after login
+   * This ensures notifications appear right away instead of waiting for the refresh timer
+   */
+  private loadUserNotifications(): void {
+    try {
+      // Get user ID from localStorage
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        console.log('[AuthService] Cannot load notifications - no userId found');
+        return;
+      }
+
+      console.log(`[AuthService] 🔔 Immediate notification loading for user ${userId}`);
+      
+      // First refresh from storage to get any cached notifications
+      this.notificationService.refreshFromStorage();
+      
+      // Then immediately fetch from API to ensure we have the latest
+      this.notificationService.refreshNotifications();
+      
+      // Set up a second refresh after a short delay to handle any race conditions
+      setTimeout(() => {
+        console.log('[AuthService] 🔄 Secondary notification refresh to ensure completeness');
+        this.notificationService.refreshNotifications();
+      }, 2000);
+    } catch (error) {
+      console.error('[AuthService] Error loading notifications:', error);
     }
   }
 }

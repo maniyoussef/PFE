@@ -272,17 +272,14 @@ export class UsersListCreationComponent implements OnInit {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '400px',
       data: {
-        title: 'Confirm Deletion',
-        message: `Are you sure you want to delete ${user.name} ${user.lastName}?`,
-        confirmText: 'Delete',
-        cancelText: 'Cancel',
+        title: 'Confirmation',
+        message: `Voulez-vous vraiment supprimer l'utilisateur ${user.name} ${user.lastName}?`,
       },
-      panelClass: 'confirm-dialog',
     });
 
     dialogRef.afterClosed().subscribe((result) => {
-      if (result && user.id) {
-        this.deleteUser(user.id);
+      if (result) {
+        this.deleteUser(user.id!);
       }
     });
   }
@@ -292,24 +289,34 @@ export class UsersListCreationComponent implements OnInit {
       next: () => {
         this.users = this.users.filter((user) => user.id !== userId);
         this.filterUsers();
-        this.showNotification('User deleted successfully!', 'success');
+        this.showNotification('Utilisateur supprimé avec succès!', 'success');
       },
       error: (error) => {
         console.error('Error deleting user:', error);
         this.showNotification(
-          'Error deleting user. Please try again.',
+          'Erreur lors de la suppression. Veuillez réessayer.',
           'error'
         );
       },
     });
   }
 
+  // Helper method to safely get country icon URL
+  getCountryIcon(user: User): string | null {
+    // Check if the country exists and has an icon property
+    // This handles the icon property which isn't in the type definition but might exist in the data
+    if (user.country && (user.country as any).icon) {
+      return (user.country as any).icon;
+    }
+    return null;
+  }
+
   showNotification(message: string, type: 'success' | 'error'): void {
-    this.snackBar.open(message, 'Close', {
-      duration: 4000,
+    this.snackBar.open(message, 'Fermer', {
+      duration: 3000,
       horizontalPosition: 'end',
       verticalPosition: 'top',
-      panelClass: type === 'success' ? 'success-snackbar' : 'error-snackbar',
+      panelClass: type === 'success' ? ['success-snackbar'] : ['error-snackbar'],
     });
   }
 }

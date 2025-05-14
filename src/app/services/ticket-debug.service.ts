@@ -10,7 +10,8 @@ export class TicketDebugService {
     IN_PROGRESS: 'En cours',
     RESOLVED: 'Résolu',
     UNRESOLVED: 'Non résolu',
-    REFUSED: 'Refusé'
+    REFUSED: 'Refusé',
+    ACCEPTED: 'Accepté'
   };
 
   constructor() {}
@@ -63,7 +64,7 @@ export class TicketDebugService {
    * Fix common ticket state inconsistencies
    */
   fixTicketState(ticket: Ticket): Ticket {
-    const { ASSIGNED, IN_PROGRESS, RESOLVED, UNRESOLVED } = TicketDebugService.TICKET_STATUS;
+    const { ASSIGNED, IN_PROGRESS, RESOLVED, UNRESOLVED, ACCEPTED } = TicketDebugService.TICKET_STATUS;
     const fixed = { ...ticket };
 
     // Ensure boolean properties are actual booleans
@@ -72,6 +73,14 @@ export class TicketDebugService {
 
     // Fix status-workflow property mismatches
     if (fixed.status === ASSIGNED) {
+      fixed.temporarilyStopped = false;
+      fixed.workFinished = false;
+      fixed.startWorkTime = undefined;
+      fixed.finishWorkTime = undefined;
+    }
+
+    // Handle ACCEPTED status
+    if (fixed.status === ACCEPTED) {
       fixed.temporarilyStopped = false;
       fixed.workFinished = false;
       fixed.startWorkTime = undefined;

@@ -11,7 +11,7 @@ export const ROLE_ROUTES = {
   [UserRole.ADMIN]: '/admin/dashboard',
   [UserRole.MANAGER]: '/manager',
   [UserRole.USER]: '/user',
-  [UserRole.CLIENT]: '/client',
+  [UserRole.CLIENT]: '/user',
   [UserRole.CHEF_PROJET]: '/chef-projet',
   [UserRole.COLLABORATEUR]: '/collaborateur',
 } as const;

@@ -1,6 +1,9 @@
 <div class="layout-container">
-  <app-top-bar></app-top-bar>
-  <app-chef-projet-navbar></app-chef-projet-navbar>
+  <!-- Headers container - keeps both topbar and navbar together when scrolling -->
+  <div class="header-container">
+    <app-top-bar></app-top-bar>
+    <app-chef-projet-navbar></app-chef-projet-navbar>
+  </div>
   <div class="main-content">
     <router-outlet></router-outlet>
   </div>

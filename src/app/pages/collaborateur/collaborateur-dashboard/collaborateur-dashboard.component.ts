@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,19 +11,19 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { FormsModule } from '@angular/forms';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { RouterLink, Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
+import { Subscription } from 'rxjs';
 import { TicketService } from '../../../services/ticket.service';
 import { AuthService } from '../../../services/auth.service';
 import { Ticket } from '../../../models/ticket.model';
-import { interval, Subscription } from 'rxjs';
-import { DatePipe } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
-import { ReportDialogComponent } from '../report-dialog.component';
-import { RouterLink } from '@angular/router';
-import { Router } from '@angular/router';
+import { interval } from 'rxjs';
 import { User } from '../../../models/user.model';
+import { environment } from '../../../../environments/environment';
+import { switchMap } from 'rxjs/operators';
+import { ReportDialogComponent } from '../report-dialog.component';
 
 // Define a new status for the finished state
 const TICKET_STATUS = {
@@ -60,7 +61,6 @@ const TICKET_STATUS = {
 })
 export class CollaborateurDashboardComponent implements OnInit, OnDestroy {
   tickets: Ticket[] = [];
-  filteredTickets: Ticket[] = [];
   isLoading = true;
   userId: number | null = null;
 
@@ -70,6 +70,46 @@ export class CollaborateurDashboardComponent implements OnInit, OnDestroy {
   inProgressTickets = 0;
   resolvedTickets = 0;
   nonResolvedTickets = 0;
+
+  // Dashboard cards for the grid (like chef projet)
+  dashboardCards = [
+    {
+      title: 'Tickets assignés',
+      icon: 'assignment',
+      get count() { return (window as any).assignedTickets ?? 0; },
+      buttonText: 'Voir mes tickets',
+      route: '/collaborateur/tickets',
+      color: 'primary',
+      get value() { return (window as any).assignedTickets ?? 0; },
+    },
+    {
+      title: 'Tickets en cours',
+      icon: 'hourglass_bottom',
+      get count() { return (window as any).inProgressTickets ?? 0; },
+      buttonText: 'Voir mes tickets',
+      route: '/collaborateur/tickets',
+      color: 'accent',
+      get value() { return (window as any).inProgressTickets ?? 0; },
+    },
+    {
+      title: 'Tickets résolus',
+      icon: 'check_circle',
+      get count() { return (window as any).resolvedTickets ?? 0; },
+      buttonText: 'Voir mes tickets',
+      route: '/collaborateur/tickets',
+      color: 'success',
+      get value() { return (window as any).resolvedTickets ?? 0; },
+    },
+    {
+      title: 'Tickets non résolus',
+      icon: 'error',
+      get count() { return (window as any).nonResolvedTickets ?? 0; },
+      buttonText: 'Voir mes tickets',
+      route: '/collaborateur/tickets',
+      color: 'warn',
+      get value() { return (window as any).nonResolvedTickets ?? 0; },
+    },
+  ];
 
   // Filter
   statusFilter: string = 'all';
@@ -83,38 +123,23 @@ export class CollaborateurDashboardComponent implements OnInit, OnDestroy {
   // Constants for easy reference
   readonly STATUS = TICKET_STATUS;
 
-  // Table columns
-  displayedColumns: string[] = [
-    'id',
-    'title',
-    'project',
-    'priority',
-    'status',
-    'createdAt',
-    'timer',
-    'duration',
-  ];
-
-  stats = [
-    { title: 'Assignés', icon: 'assignment', value: 0 },
-    { title: 'En cours', icon: 'engineering', value: 0 },
-    { title: 'Terminés', icon: 'timer_off', value: 0 },
-    { title: 'Résolus', icon: 'check_circle', value: 0 },
-    { title: 'Non résolus', icon: 'report_problem', value: 0 },
-  ];
-
   constructor(
     private ticketService: TicketService,
     private authService: AuthService,
+    private http: HttpClient,
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
-    private http: HttpClient,
     private router: Router
   ) {}
 
   ngOnInit(): void {
     console.log('[CollaborateurDashboard] 🏁 Dashboard component initialized');
     this.loadUserId();
+    // Bind stats to window for dashboardCards getters
+    (window as any).assignedTickets = this.assignedTickets;
+    (window as any).inProgressTickets = this.inProgressTickets;
+    (window as any).resolvedTickets = this.resolvedTickets;
+    (window as any).nonResolvedTickets = this.nonResolvedTickets;
   }
 
   ngOnDestroy(): void {
@@ -228,25 +253,10 @@ export class CollaborateurDashboardComponent implements OnInit, OnDestroy {
         next: (tickets) => {
           console.log('Received tickets:', tickets);
 
-          // Debug: Log each ticket status
-          tickets.forEach((ticket) => {
-            console.log(
-              `Ticket #${ticket.id} - Status: "${
-                ticket.status
-              }" - Type: ${typeof ticket.status}`
-            );
-          });
+          // Store all tickets for stats and filtering
+          this.tickets = tickets;
 
-          // Filter to only show tickets with status "Assigné" or "En cours"
-          this.tickets = tickets.filter(
-            (ticket) =>
-              ticket.status === 'Assigné' ||
-              ticket.status === this.STATUS.ASSIGNED ||
-              ticket.status === 'En cours' ||
-              ticket.status === this.STATUS.IN_PROGRESS
-          );
-
-          // Check for active tickets and restore timers
+          // Restore timers for tickets in progress
           this.tickets.forEach((ticket) => {
             if (ticket.status === 'En cours' && ticket.startTime) {
               this.restoreTimer(ticket);
@@ -254,7 +264,6 @@ export class CollaborateurDashboardComponent implements OnInit, OnDestroy {
           });
 
           this.updateStatistics();
-          this.applyFilters();
           this.isLoading = false;
         },
         error: (error) => {
@@ -271,45 +280,37 @@ export class CollaborateurDashboardComponent implements OnInit, OnDestroy {
   }
 
   updateStatistics(): void {
+    // Calculate stats from all tickets, including both French and English status values
     this.totalTickets = this.tickets.length;
     this.assignedTickets = this.tickets.filter(
-      (ticket) => ticket.status === 'Assigné'
+      (t) =>
+        t.status === 'Assigné' ||
+        t.status === 'ASSIGNED' ||
+        t.status === this.STATUS.ASSIGNED
     ).length;
     this.inProgressTickets = this.tickets.filter(
-      (ticket) => ticket.status === 'En cours'
+      (t) =>
+        t.status === 'En cours' ||
+        t.status === 'IN_PROGRESS' ||
+        t.status === this.STATUS.IN_PROGRESS
     ).length;
     this.resolvedTickets = this.tickets.filter(
-      (ticket) => ticket.status === 'Résolu'
+      (t) =>
+        t.status === 'Résolu' ||
+        t.status === 'RESOLVED' ||
+        t.status === this.STATUS.RESOLVED
     ).length;
     this.nonResolvedTickets = this.tickets.filter(
-      (ticket) => ticket.status === 'Non résolu'
+      (t) =>
+        t.status === 'Non résolu' ||
+        t.status === 'UNRESOLVED' ||
+        t.status === this.STATUS.UNRESOLVED
     ).length;
-
-    // Update stats array for UI
-    this.stats[0].value = this.assignedTickets;
-    this.stats[1].value = this.inProgressTickets;
-    this.stats[2].value = this.tickets.filter(
-      (ticket) => ticket.status === 'Terminé'
-    ).length;
-    this.stats[3].value = this.resolvedTickets;
-    this.stats[4].value = this.nonResolvedTickets;
-  }
-
-  applyFilters(): void {
-    if (this.statusFilter === 'all') {
-      // Only include assigned or in progress tickets
-      this.filteredTickets = [...this.tickets];
-    } else {
-      this.filteredTickets = this.tickets.filter(
-        (ticket) =>
-          ticket.status &&
-          ticket.status.toLowerCase() === this.statusFilter.toLowerCase()
-      );
-    }
-  }
-
-  onFilterChange(): void {
-    this.applyFilters();
+    // Update global for dashboardCards
+    (window as any).assignedTickets = this.assignedTickets;
+    (window as any).inProgressTickets = this.inProgressTickets;
+    (window as any).resolvedTickets = this.resolvedTickets;
+    (window as any).nonResolvedTickets = this.nonResolvedTickets;
   }
 
   async startWork(ticket: Ticket): Promise<void> {
@@ -467,22 +468,35 @@ export class CollaborateurDashboardComponent implements OnInit, OnDestroy {
     if (!this.userId) return;
 
     try {
-      // Update ticket status to 'Résolu'
+      // Update UI immediately
       ticket.status = 'Résolu';
+      
+      // First update report if provided
       if (report) {
-        ticket.report = report;
+        // Update commentaire to include report summary
+        const currentDate = new Date().toLocaleString();
+        const reportComment = `${currentDate} - Ticket résolu avec rapport.`;
+        const updatedCommentaire = ticket.commentaire 
+          ? `${ticket.commentaire}\n${reportComment}` 
+          : reportComment;
+        
+        // Update commentaire first
+        await this.http.patch<any>(`${environment.apiUrl}/tickets/${ticket.id}/comment`, {
+          commentaire: updatedCommentaire
+        }).toPromise();
+        
+        // Then update report
+        await this.http.patch<any>(`${environment.apiUrl}/tickets/${ticket.id}/report`, {
+          report: report
+        }).toPromise();
       }
-
-      await this.http
-        .put<Ticket>(`/api/Tickets/${ticket.id}`, {
-          ...ticket,
-          status: 'Résolu',
-          report: report || ticket.report,
-        })
-        .toPromise();
+      
+      // Use workflow endpoint to correctly trigger notifications
+      await this.ticketService.updateTicketWorkflow(ticket.id, {
+        workFinished: true  // This will automatically set status to Résolu in the backend
+      }).toPromise();
 
       this.updateStatistics();
-      this.applyFilters();
       this.showSnackbar('Ticket marqué comme "Résolu"');
     } catch (error) {
       console.error('Error resolving ticket:', error);
@@ -494,20 +508,33 @@ export class CollaborateurDashboardComponent implements OnInit, OnDestroy {
     if (!this.userId) return;
 
     try {
-      // Update ticket status to 'Non résolu'
+      // Update UI immediately
       ticket.status = 'Non résolu';
       ticket.report = report;
-
-      await this.http
-        .put<Ticket>(`/api/Tickets/${ticket.id}`, {
-          ...ticket,
-          status: 'Non résolu',
-          report: report,
-        })
-        .toPromise();
+      
+      // First update report with detailed explanation
+      const currentDate = new Date().toLocaleString();
+      const reportComment = `${currentDate} - Ticket marqué comme non résolu.`;
+      const updatedCommentaire = ticket.commentaire 
+        ? `${ticket.commentaire}\n${reportComment}` 
+        : reportComment;
+      
+      // Update commentaire first
+      await this.http.patch<any>(`${environment.apiUrl}/tickets/${ticket.id}/comment`, {
+        commentaire: updatedCommentaire
+      }).toPromise();
+      
+      // Then update report
+      await this.http.patch<any>(`${environment.apiUrl}/tickets/${ticket.id}/report`, {
+        report: report
+      }).toPromise();
+      
+      // Use workflow endpoint to correctly trigger notifications
+      await this.ticketService.updateTicketWorkflow(ticket.id, {
+        workFinished: false  // This will automatically set status to Non résolu in the backend
+      }).toPromise();
 
       this.updateStatistics();
-      this.applyFilters();
       this.showSnackbar('Ticket marqué comme "Non résolu"');
     } catch (error) {
       console.error('Error marking ticket as unresolved:', error);

@@ -11,6 +11,14 @@ $transition-speed: 0.3s;
 // Dialog container
 :host {
   display: block;
+  max-height: 100%;
+}
+
+.dialog-container {
+  max-height: 80vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem;
 }
 
 // Dialog title
@@ -40,10 +48,6 @@ $transition-speed: 0.3s;
   justify-content: center;
   align-items: center;
   height: 200px;
-
-  ::ng-deep .mat-spinner circle {
-    stroke: $primary-orange !important;
-  }
 }
 
 // Form styles
@@ -51,6 +55,8 @@ $transition-speed: 0.3s;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  overflow-y: auto;
+  max-height: calc(80vh - 120px); // account for title and buttons
 }
 
 .form-row {
@@ -59,40 +65,6 @@ $transition-speed: 0.3s;
 
 .full-width {
   width: 100%;
-}
-
-// Form field styling
-::ng-deep .mat-form-field-appearance-outline .mat-form-field-outline {
-  color: rgba(0, 0, 0, 0.12);
-  transition: color $transition-speed ease;
-}
-
-::ng-deep
-  .mat-form-field-appearance-outline.mat-focused
-  .mat-form-field-outline-thick {
-  color: $primary-orange;
-}
-
-::ng-deep .mat-form-field-appearance-outline .mat-form-field-label {
-  color: rgba(0, 0, 0, 0.6);
-}
-
-::ng-deep .mat-form-field.mat-focused .mat-form-field-label {
-  color: $primary-orange;
-}
-
-// Select option with flag
-.select-option {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.country-flag-small {
-  width: 24px;
-  height: 18px;
-  border-radius: 2px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 // Dialog actions
@@ -152,4 +124,51 @@ $transition-speed: 0.3s;
 
 .slide-in {
   animation: slideIn 0.3s ease forwards;
+}
+
+// Form group for custom select
+.form-group {
+  margin-bottom: 1.5rem;
+
+  label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.6);
+    margin-bottom: 0.5rem;
+  }
+
+  .form-control {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    background-color: #f5f5f5;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1em;
+    transition: all $transition-speed ease;
+
+    &:focus {
+      border-color: $primary-orange;
+      background-color: rgba(255, 112, 67, 0.05);
+      box-shadow: 0 0 0 4px rgba(255, 112, 67, 0.1);
+      outline: none;
+    }
+
+    &:hover {
+      background-color: #f0f0f0;
+    }
+  }
+
+  .error-message {
+    color: #d32f2f;
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+  }
 }

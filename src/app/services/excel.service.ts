@@ -41,19 +41,42 @@ export class ExcelService {
 
   private prepareTicketData(tickets: Ticket[]): any[] {
     return tickets.map(ticket => ({
-      'Titre': ticket.title,
+      'Titre': ticket.title || 'Non spécifié',
       'Qualification': ticket.qualification || 'Non spécifié',
       'Priorité': ticket.priority || 'Non spécifié',
       'Projet': ticket.project?.name || 'Non spécifié',
       'Catégorie': ticket.problemCategory?.name || 'Non spécifié',
-      'Statut': ticket.status || 'Non spécifié',
+      'Statut': this.formatStatus(ticket.status) || 'Non spécifié',
       'Assigné à': ticket.assignedTo ? 
-        `${ticket.assignedTo.name} ${ticket.assignedTo.lastName || ''}` : 
+        `${ticket.assignedTo.name || ''} ${ticket.assignedTo.lastName || ''}`.trim() || 'Non spécifié' : 
         'Non assigné',
       'Date de création': this.formatDate(ticket.createdAt),
+      'Durée de travail': this.formatWorkDuration(ticket.workDuration),
       'Description': ticket.description || '',
       'Commentaires': ticket.commentaire || ''
     }));
+  }
+
+  private formatStatus(status: string | undefined): string {
+    if (!status) return 'Non spécifié';
+    
+    switch(status) {
+      case 'Assigned': return 'Assigné';
+      case 'In Progress': return 'En cours';
+      case 'Resolved': return 'Résolu';
+      case 'Unresolved': return 'Non résolu';
+      default: return status;
+    }
+  }
+  
+  private formatWorkDuration(seconds: number | undefined): string {
+    if (!seconds) return '00:00:00';
+    
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }
 
   private formatDate(dateString: string): string {

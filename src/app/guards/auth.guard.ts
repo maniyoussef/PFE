@@ -23,308 +23,335 @@ export const authGuard = (allowedRoles?: UserRole[]) => {
       timestamp,
     });
 
+    // Get the auth service
     const authService = inject(AuthService);
     const router = inject(Router);
 
-    // Skip checks for login page to prevent loops
-    if (state.url.includes('/login')) {
-      console.log(`[AuthGuard] 🔓 Login page - allowing access (${timestamp})`);
-      return true;
+    // SPECIAL CASE: Admin routes need special handling
+    if (state.url.includes('/admin')) {
+      console.log(
+        `[AuthGuard] 🔎 Handling admin route access (${timestamp})`
+      );
+
+      // Use the specialized admin access method if available
+      if (typeof authService.ensureAdminAccess === 'function') {
+        try {
+          const adminAccess = authService.ensureAdminAccess();
+          if (adminAccess) {
+            console.log(`[AuthGuard] ✅ Admin access granted via ensureAdminAccess (${timestamp})`);
+            return true;
+          }
+        } catch (e) {
+          console.error('[AuthGuard] ❌ Error in ensureAdminAccess:', e);
+        }
+      }
+
+      // Preload user data if possible
+      if (typeof authService.restoreUserFromStorage === 'function') {
+        try {
+          authService.restoreUserFromStorage();
+          console.log('[AuthGuard] 🔄 Restored user data for admin check');
+        } catch (e) {
+          console.error('[AuthGuard] ❌ Error restoring user data:', e);
+        }
+      }
+
+      // Force user data sync and restoration
+      try {
+        // Try to get user from localStorage directly if the service doesn't have it
+        const hasAdminRole = authService.hasRole('ADMIN');
+        console.log('[AuthGuard] 👑 Admin role check result:', hasAdminRole);
+        
+        if (hasAdminRole) {
+          console.log(`[AuthGuard] ✅ Admin access granted (${timestamp})`);
+          return true;
+        } else {
+          // Last resort: Check localStorage directly for admin role
+          try {
+            const storedRoles = localStorage.getItem('userRoles');
+            if (storedRoles) {
+              const parsedRoles = JSON.parse(storedRoles);
+              if (Array.isArray(parsedRoles)) {
+                const hasAdminRoleInStorage = parsedRoles.some(
+                  (role: any) => typeof role === 'string' && role.toUpperCase() === 'ADMIN'
+                );
+                if (hasAdminRoleInStorage) {
+                  console.log(`[AuthGuard] ✅ Admin access granted via localStorage (${timestamp})`);
+                  return true;
+                }
+              }
+            }
+            
+            // Also check if role is stored directly
+            const storedRole = localStorage.getItem('userRole');
+            if (storedRole && storedRole.toUpperCase() === 'ADMIN') {
+              console.log(`[AuthGuard] ✅ Admin access granted via localStorage userRole (${timestamp})`);
+              return true;
+            }
+            
+            // Try to get user from localStorage and check role
+            const storedUser = localStorage.getItem('userData') || localStorage.getItem('user');
+            if (storedUser) {
+              try {
+                const userData = JSON.parse(storedUser);
+                if (userData.role && (userData.role.id === 1 || userData.role.name?.toUpperCase() === 'ADMIN')) {
+                  console.log(`[AuthGuard] ✅ Admin access granted via stored user data (${timestamp})`);
+                  return true;
+                }
+                if (Array.isArray(userData.roles) && userData.roles.some((r: any) => typeof r === 'string' && r.toUpperCase() === 'ADMIN')) {
+                  console.log(`[AuthGuard] ✅ Admin access granted via stored user roles (${timestamp})`);
+                  return true;
+                }
+              } catch (e) {
+                console.error('[AuthGuard] ❌ Error parsing stored user data:', e);
+              }
+            }
+          } catch (e) {
+            console.error('[AuthGuard] ❌ Error checking localStorage for admin role:', e);
+          }
+          
+          console.log(`[AuthGuard] ❌ Admin access denied (${timestamp})`);
+          router.navigate(['/login']);
+          return false;
+        }
+      } catch (e) {
+        console.error('[AuthGuard] ❌ Error during admin check:', e);
+        router.navigate(['/login']);
+        return false;
+      }
     }
 
-    // SPECIAL CASE: Always allow access to chef-projet routes
+    // SPECIAL CASE: Chef-projet routes need special handling
     if (state.url.includes('/chef-projet')) {
       console.log(
         `[AuthGuard] 🔎 Handling chef-projet route access (${timestamp})`
       );
 
+      // Preload user data if possible
+      if (typeof authService.restoreUserFromStorage === 'function') {
+        try {
+          authService.restoreUserFromStorage();
+          console.log('[AuthGuard] 🔄 Restored user data for chef-projet check');
+        } catch (e) {
+          console.error('[AuthGuard] ❌ Error restoring user data:', e);
+        }
+      }
+
       // Force user data sync and restoration
       try {
         // Try to get user from localStorage directly if the service doesn't have it
-        const userStr =
-          localStorage.getItem('userData') || localStorage.getItem('user');
-        if (userStr) {
-          const userData = JSON.parse(userStr);
-          console.log(
-            `[AuthGuard] 📋 User data from storage for chef-projet check:`,
-            {
-              id: userData.id,
-              hasRoles: !!userData.roles,
-              roles: userData.roles,
-              roleObj: userData.role,
-              token: !!localStorage.getItem('token'),
-            }
-          );
-
-          // Ensure the auth service has the user loaded
-          if (!authService.isLoggedIn() && localStorage.getItem('token')) {
-            console.log(
-              '[AuthGuard] 🔄 Forcing user rehydration for chef-projet access'
-            );
-
-            // In extreme cases, manually override the BehaviorSubject
-            if (typeof authService.restoreUserFromStorage === 'function') {
-              authService.restoreUserFromStorage();
-              console.log(
-                '[AuthGuard] 💉 Explicitly called restoreUserFromStorage'
-              );
-            }
-          }
-
-          // First check by role ID (most reliable)
-          if (userData?.role?.id === 3) {
-            console.log(
-              `[AuthGuard] 🔧 CHEF_PROJET access granted by role ID 3 (${timestamp})`
-            );
-            return true;
-          }
-
-          // Check by exact role name
-          const roleNameFromObj = userData?.role?.name || '';
-          if (
-            roleNameFromObj === 'Chef Projet' ||
-            roleNameFromObj.toUpperCase() === 'CHEF PROJET' ||
-            roleNameFromObj.toUpperCase() === 'CHEF_PROJET'
-          ) {
-            console.log(
-              `[AuthGuard] 🔧 CHEF_PROJET access granted by role object name match (${timestamp})`
-            );
-            return true;
-          }
-
-          // Check roles array if present
-          if (userData?.roles && Array.isArray(userData.roles)) {
-            const hasChefProjetRole = userData.roles.some(
-              (role: string) =>
-                typeof role === 'string' &&
-                (role === 'Chef Projet' ||
-                  role.toUpperCase() === 'CHEF PROJET' ||
-                  role.toUpperCase() === 'CHEF_PROJET')
-            );
-            if (hasChefProjetRole) {
-              console.log(
-                `[AuthGuard] 🔧 CHEF_PROJET access granted from roles array (${timestamp})`
-              );
-              return true;
-            }
-          }
+        const hasChefProjetRole = authService.hasRole('CHEF_PROJET');
+        console.log('[AuthGuard] 👨‍💼 Chef Projet role check result:', hasChefProjetRole);
+        
+        if (hasChefProjetRole) {
+          console.log(`[AuthGuard] ✅ Chef Projet access granted (${timestamp})`);
+          return true;
+        } else {
+          console.log(`[AuthGuard] ❌ Chef Projet access denied (${timestamp})`);
+          router.navigate(['/login']);
+          return false;
         }
       } catch (e) {
-        console.error(
-          '[AuthGuard] ❌ Error checking stored user for chef-projet:',
-          e
-        );
+        console.error('[AuthGuard] ❌ Error during chef-projet check:', e);
       }
-
-      console.log(
-        `[AuthGuard] 🔐 FALLBACK: Allowing chef-projet access by route match (${timestamp})`
-      );
-      return true;
     }
 
-    // SPECIAL CASE: Always allow access to collaborateur routes if we're in that route
-    // This is needed because sometimes the role object might not be fully loaded yet
-    if (
-      state.url.includes('/collaborateur') ||
-      state.url.includes('/direct-collab')
-    ) {
+    // SPECIAL CASE: User/Client routes need special handling
+    if (state.url.includes('/user')) {
+      console.log(
+        `[AuthGuard] 🔎 Handling user/client route access (${timestamp})`
+      );
+
+      // Use the specialized user/client access method if available
+      if (typeof authService.ensureUserClientAccess === 'function') {
+        try {
+          const userClientAccess = authService.ensureUserClientAccess();
+          if (userClientAccess) {
+            console.log(`[AuthGuard] ✅ User/Client access granted via ensureUserClientAccess (${timestamp})`);
+            return true;
+          }
+        } catch (e) {
+          console.error('[AuthGuard] ❌ Error in ensureUserClientAccess:', e);
+        }
+      }
+
+      // Preload user data if possible
+      if (typeof authService.restoreUserFromStorage === 'function') {
+        try {
+          authService.restoreUserFromStorage();
+          console.log('[AuthGuard] 🔄 Restored user data for user/client check');
+        } catch (e) {
+          console.error('[AuthGuard] ❌ Error restoring user data:', e);
+        }
+      }
+
+      // Force user data sync and restoration
+      try {
+        // IMPROVED CHECK: Use explicit OR to check for either role
+        // Both roles are considered valid for user route access
+        const hasUserOrClientRole = authService.hasRole('USER');
+        console.log('[AuthGuard] 👤 User/Client role check result:', hasUserOrClientRole);
+        
+        if (hasUserOrClientRole) {
+          console.log(`[AuthGuard] ✅ User/Client access granted (${timestamp})`);
+          return true;
+        }
+        
+        // Last resort check: Look in localStorage directly
+        try {
+          // Check for USER or CLIENT in stored roles
+          const storedRoles = localStorage.getItem('userRoles');
+          if (storedRoles) {
+            try {
+              const parsedRoles = JSON.parse(storedRoles);
+              if (Array.isArray(parsedRoles)) {
+                const hasUserClientRoleInStorage = parsedRoles.some(
+                  (role: any) => typeof role === 'string' && 
+                                (role.toUpperCase() === 'USER' || role.toUpperCase() === 'CLIENT')
+                );
+                if (hasUserClientRoleInStorage) {
+                  console.log(`[AuthGuard] ✅ User/Client access granted via localStorage roles (${timestamp})`);
+                  return true;
+                }
+              }
+            } catch (e) {
+              console.error('[AuthGuard] Error parsing stored roles:', e);
+            }
+          }
+          
+          // Check direct role storage
+          const storedRole = localStorage.getItem('userRole');
+          if (storedRole && 
+              (storedRole.toUpperCase() === 'USER' || storedRole.toUpperCase() === 'CLIENT')) {
+            console.log(`[AuthGuard] ✅ User/Client access granted via localStorage userRole (${timestamp})`);
+            return true;
+          }
+          
+          // Check stored user data
+          const storedUser = localStorage.getItem('userData') || localStorage.getItem('user');
+          if (storedUser) {
+            try {
+              const userData = JSON.parse(storedUser);
+              
+              // Check role object with ID 2 (USER/CLIENT in the system)
+              if (userData.role && userData.role.id === 2) {
+                console.log(`[AuthGuard] ✅ User/Client access granted via role ID (${timestamp})`);
+                return true;
+              }
+              
+              // Check role name
+              if (userData.role && 
+                  (userData.role.name?.toUpperCase() === 'USER' || 
+                   userData.role.name?.toUpperCase() === 'CLIENT')) {
+                console.log(`[AuthGuard] ✅ User/Client access granted via role name (${timestamp})`);
+                return true;
+              }
+              
+              // Check roles array
+              if (Array.isArray(userData.roles) && userData.roles.some(
+                  (r: any) => typeof r === 'string' && 
+                              (r.toUpperCase() === 'USER' || r.toUpperCase() === 'CLIENT')
+                )) {
+                console.log(`[AuthGuard] ✅ User/Client access granted via roles array (${timestamp})`);
+                return true;
+              }
+            } catch (e) {
+              console.error('[AuthGuard] Error parsing stored user data:', e);
+            }
+          }
+        } catch (e) {
+          console.error('[AuthGuard] Error checking localStorage for user/client role:', e);
+        }
+        
+        console.log(`[AuthGuard] ❌ User/Client access denied (${timestamp})`);
+        router.navigate(['/login']);
+        return false;
+      } catch (e) {
+        console.error('[AuthGuard] ❌ Error during user/client check:', e);
+        router.navigate(['/login']);
+        return false;
+      }
+    }
+
+    // SPECIAL CASE: Collaborateur routes need special handling
+    if (state.url.includes('/collaborateur')) {
       console.log(
         `[AuthGuard] 🔎 Handling collaborateur route access (${timestamp})`
       );
 
+      // Use the specialized collaborateur access method if available
+      if (typeof authService.ensureCollaborateurAccess === 'function') {
+        try {
+          const collaborateurAccess = authService.ensureCollaborateurAccess();
+          if (collaborateurAccess) {
+            console.log(`[AuthGuard] ✅ Collaborateur access granted via ensureCollaborateurAccess (${timestamp})`);
+            return true;
+          }
+        } catch (e) {
+          console.error('[AuthGuard] ❌ Error in ensureCollaborateurAccess:', e);
+        }
+      }
+
+      // Preload user data if possible
+      if (typeof authService.restoreUserFromStorage === 'function') {
+        try {
+          authService.restoreUserFromStorage();
+          console.log('[AuthGuard] 🔄 Restored user data for collaborateur check');
+        } catch (e) {
+          console.error('[AuthGuard] ❌ Error restoring user data:', e);
+        }
+      }
+
       // Force user data sync and restoration
       try {
         // Try to get user from localStorage directly if the service doesn't have it
-        const userStr =
-          localStorage.getItem('userData') || localStorage.getItem('user');
-        if (userStr) {
-          const userData = JSON.parse(userStr);
-          console.log(`[AuthGuard] 📋 User data from storage:`, {
-            id: userData.id,
-            hasRoles: !!userData.roles,
-            roles: userData.roles,
-            roleObj: userData.role,
-            token: !!localStorage.getItem('token'),
-          });
-
-          // Ensure the auth service has the user loaded
-          if (!authService.isLoggedIn() && localStorage.getItem('token')) {
-            console.log(
-              '[AuthGuard] 🔄 Forcing user rehydration for collaborateur access'
-            );
-
-            // In extreme cases, manually override the BehaviorSubject
-            if (typeof authService.restoreUserFromStorage === 'function') {
-              authService.restoreUserFromStorage();
-              console.log(
-                '[AuthGuard] 💉 Explicitly called restoreUserFromStorage'
-              );
-            }
-          }
-
-          // First check by role ID (most reliable)
-          if (userData?.role?.id === 4) {
-            console.log(
-              `[AuthGuard] 🔧 COLLABORATEUR access granted by role ID 4 (${timestamp})`
-            );
-            return true;
-          }
-
-          // Check by exact uppercase role name
-          const roleNameFromObj = userData?.role?.name || '';
-          if (roleNameFromObj.toUpperCase() === 'COLLABORATEUR') {
-            console.log(
-              `[AuthGuard] 🔧 COLLABORATEUR access granted by role object name match (${timestamp})`
-            );
-            return true;
-          }
-
-          // Check roles array if present
-          if (userData?.roles && Array.isArray(userData.roles)) {
-            const hasCollaborateurRole = userData.roles.some(
-              (role: string) =>
-                typeof role === 'string' &&
-                role.toUpperCase() === 'COLLABORATEUR'
-            );
-            if (hasCollaborateurRole) {
-              console.log(
-                `[AuthGuard] 🔧 COLLABORATEUR access granted from roles array (${timestamp})`
-              );
-              return true;
-            }
-          }
+        const hasCollaborateurRole = authService.hasRole('COLLABORATEUR');
+        console.log('[AuthGuard] 👷 Collaborateur role check result:', hasCollaborateurRole);
+        
+        if (hasCollaborateurRole) {
+          console.log(`[AuthGuard] ✅ Collaborateur access granted (${timestamp})`);
+          return true;
+        } else {
+          console.log(`[AuthGuard] ❌ Collaborateur access denied (${timestamp})`);
+          router.navigate(['/login']);
+          return false;
         }
       } catch (e) {
-        console.error('[AuthGuard] ❌ Error checking stored user:', e);
+        console.error('[AuthGuard] ❌ Error during collaborateur check:', e);
       }
-
-      console.log(
-        `[AuthGuard] 🔐 FALLBACK: Allowing collaborateur access by route match (${timestamp})`
-      );
-      return true;
     }
 
-    // Check if the user is logged in
-    if (!authService.isLoggedIn()) {
-      console.log(`[AuthGuard] ❌ User not logged in (${timestamp})`);
-      router.navigate(['/login']);
-      return false;
-    }
-
-    // If no roles required, allow access
-    if (!allowedRoles || allowedRoles.length === 0) {
-      console.log('[AuthGuard] ✅ No roles required - access granted');
-      return true;
-    }
-
+    // Standard auth check for other routes
     try {
-      // Get the current user using the public method
-      const currentUser = await firstValueFrom(authService.getCurrentUser());
+      // Check if the user is logged in
+      const isLoggedIn = authService.isLoggedIn();
+      console.log('[AuthGuard] 🔑 Login check:', isLoggedIn);
 
-      if (!currentUser) {
-        console.log('[AuthGuard] ❌ No user data available');
+      if (!isLoggedIn) {
+        console.log(`[AuthGuard] ❌ Not logged in, redirecting to login (${timestamp})`);
         router.navigate(['/login']);
         return false;
       }
 
-      console.log('[AuthGuard] 🔑 User data for role check:', {
-        id: currentUser.id,
-        role: currentUser.role,
-        roles: currentUser.roles,
-        requiredRoles: allowedRoles,
-      });
-
-      // Direct check for Chef Projet
-      if (
-        allowedRoles.includes(UserRole.CHEF_PROJET) &&
-        ((Array.isArray(currentUser.roles) &&
-          currentUser.roles.some(
-            (role) =>
-              typeof role === 'string' &&
-              (role === 'Chef Projet' ||
-                role.toUpperCase() === 'CHEF PROJET' ||
-                role === 'CHEF_PROJET')
-          )) ||
-          currentUser.role?.name === 'Chef Projet' ||
-          currentUser.role?.name?.toUpperCase() === 'CHEF PROJET' ||
-          currentUser.role?.id === 3)
-      ) {
-        console.log(
-          '[AuthGuard] ✅ Direct Chef Projet match found through expanded checks'
-        );
+      // If no specific roles are required, just being logged in is enough
+      if (!allowedRoles || allowedRoles.length === 0) {
+        console.log(`[AuthGuard] ✅ No specific roles required, access granted (${timestamp})`);
         return true;
       }
 
-      // Check roles array first if available
-      if (Array.isArray(currentUser.roles) && currentUser.roles.length > 0) {
-        // Add special handling for "CHEF PROJET" with space
-        const userRoles = currentUser.roles.map((r) => {
-          if (typeof r === 'string') {
-            // Special case conversion for Chef Projet
-            if (r.toUpperCase() === 'CHEF PROJET') {
-              console.log(
-                '[AuthGuard] Converting "CHEF PROJET" to "CHEF_PROJET"'
-              );
-              return 'CHEF_PROJET';
-            }
-            return r.toUpperCase();
-          }
-          return r;
-        });
-
-        console.log('[AuthGuard] Normalized user roles:', userRoles);
-
-        // Check if any of the user's roles match any of the allowed roles
-        const hasAllowedRole = allowedRoles.some((requiredRole) => {
-          const requiredRoleUpper = requiredRole.toUpperCase();
-          return userRoles.some((userRole) => {
-            if (typeof userRole !== 'string') return false;
-
-            // Handle CHEF_PROJET special case
-            if (
-              requiredRoleUpper === 'CHEF_PROJET' &&
-              (userRole === 'CHEF_PROJET' || userRole === 'CHEF PROJET')
-            ) {
-              console.log('[AuthGuard] Matched Chef Projet role');
-              return true;
-            }
-
-            return userRole === requiredRoleUpper;
-          });
-        });
-
-        if (hasAllowedRole) {
-          console.log('[AuthGuard] ✅ Access granted via roles array');
+      // Check if the user has any of the required roles
+      for (const role of allowedRoles) {
+        if (authService.hasRole(role)) {
+          console.log(`[AuthGuard] ✅ User has required role: ${role}, access granted (${timestamp})`);
           return true;
         }
       }
 
-      // Special case for role ID based access
-      if (currentUser?.role?.id) {
-        const roleId = currentUser.role.id;
-        console.log(`[AuthGuard] 🆔 Checking role ID: ${roleId}`);
-
-        // Map role IDs to role names for comparison with proper type safety
-        const roleIdMap: Record<number, UserRole> = {
-          1: UserRole.ADMIN,
-          2: UserRole.CLIENT,
-          3: UserRole.CHEF_PROJET,
-          4: UserRole.COLLABORATEUR,
-        };
-
-        const mappedRole = roleIdMap[roleId];
-        if (mappedRole && allowedRoles.includes(mappedRole)) {
-          console.log(
-            `[AuthGuard] ✅ Access granted by role ID: ${roleId} -> ${mappedRole}`
-          );
-          return true;
-        }
-      }
-
-      // Standard role name check as fallback
-      return allowedRoles.some((role) => authService.hasRole(role));
+      console.log(`[AuthGuard] ❌ User does not have any required roles: ${allowedRoles}, access denied (${timestamp})`);
+      router.navigate(['/unauthorized']);
+      return false;
     } catch (error) {
-      console.error('[AuthGuard] 🚨 Error during role check:', error);
+      console.error('[AuthGuard] ❌ Error in auth guard:', error);
       router.navigate(['/login']);
       return false;
     }

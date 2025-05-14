@@ -23,6 +23,10 @@
   --navbar-height: 40px;
   --topbar-height: 30px;
   display: block;
+  
+  /* Add z-index to ensure navbar is above other elements but below fixed overlays */
+  position: relative;
+  z-index: 100;
 }
 
 /* navbar.component.scss */
@@ -42,22 +46,22 @@
 .logo-section {
   display: flex;
   align-items: center;
-  padding: 0 12px; /* Reduced from 20px */
+  padding: 0 12px;
   height: 100%;
   border-right: 1px solid var(--divider);
   background-color: var(--background);
-  min-width: 180px; /* Reduced from 200px */
-  margin-right: 10px; /* Reduced from 20px */
+  min-width: 180px;
+  margin-right: 10px;
 }
 
 .logo-image {
-  width: 28px; /* Reduced from 36px */
-  height: 28px; /* Reduced from 36px */
-  margin-right: 8px; /* Reduced from 10px */
+  width: 28px;
+  height: 28px;
+  margin-right: 8px;
 }
 
 .logo-text {
-  font-size: 18px; /* Reduced from 22px */
+  font-size: 18px;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -82,13 +86,13 @@
 .nav-links {
   display: flex;
   height: 100%;
-  padding-left: 10px; /* Reduced from 20px */
+  padding-left: 10px;
   flex-wrap: nowrap;
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
   justify-content: flex-start;
-  width: calc(100% - 400px); /* Adjusted from 450px */
+  width: calc(100% - 400px);
   max-width: 1200px;
 
   &::-webkit-scrollbar {
@@ -101,15 +105,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 10px; /* Reduced from 12px */
-  margin: 0 3px; /* Reduced from 5px */
+  padding: 0 10px;
+  margin: 0 3px;
   color: var(--text-dark);
-  font-size: 13px; /* Reduced from 14px */
+  font-size: 13px;
   text-decoration: none;
   position: relative;
   white-space: nowrap;
-  font-weight: 500; /* Reduced from 600 */
-  letter-spacing: 0.2px; /* Reduced from 0.3px */
+  font-weight: 500;
+  letter-spacing: 0.2px;
   transition: all 0.3s ease;
   border-radius: 4px;
 
@@ -124,7 +128,7 @@
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 2px; /* Reduced from 3px */
+    height: 2px;
     background-color: var(--primary);
   }
 }
@@ -133,20 +137,19 @@
   margin-left: auto;
   display: flex;
   align-items: center;
-  padding-right: 12px; /* Reduced from 20px */
-  gap: 12px; /* Reduced from 20px */
-  min-width: 120px; /* Reduced from 150px */
+  padding-right: 12px;
+  gap: 12px;
+  min-width: 120px;
 
   mat-icon {
-    margin-left: 3px; /* Reduced from 5px */
-    font-size: 20px; /* Reduced from 24px */
-    width: 20px; /* Reduced from 24px */
-    height: 20px; /* Reduced from 24px */
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
   }
 
   .logout-icon {
     color: var(--danger);
-    margin-left: 5px; /* Reduced margin between icons */
 
     &:hover {
       color: #c82333;
@@ -156,75 +159,74 @@
 
 .notification-container {
   position: relative;
+  display: flex;
+  align-items: center;
+  
+  mat-icon {
+    color: var(--text-dark);
+  }
+  
+  .notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: var(--danger);
+    color: white;
+    border-radius: 50%;
+    width: 14px;
+    height: 14px;
+    font-size: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+  }
+}
 
-  .notification-button {
-    width: 40px;
-    height: 40px;
-    line-height: 40px;
-    color: var(--text-medium);
-
-    &:hover {
-      mat-icon {
-        color: var(--primary);
-      }
+/* Deep targeting for the no-background button */
+::ng-deep .no-background-button {
+  &.mat-mdc-icon-button {
+    background-color: white !important;
+    
+    .mat-mdc-button-persistent-ripple {
+      background-color: white !important;
+    }
+    
+    .mat-mdc-button-ripple {
+      background-color: white !important;
+    }
+    
+    .mat-mdc-button-touch-target {
+      background-color: white !important;
+    }
+    
+    .mdc-icon-button__ripple {
+      background-color: white !important;
     }
   }
 }
 
-/* Custom menu styling */
-::ng-deep {
-  .mat-mdc-menu-panel {
-    background-color: var(--background) !important;
-    border-radius: 10px !important;
-    box-shadow: var(--shadow-lg) !important;
-    overflow: hidden;
-    border: 1px solid rgba(0, 0, 0, 0.03) !important;
+/* Notification pulse animation */
+.notification-pulse {
+  animation: subtle-pulse 2s infinite ease-in-out;
+}
+
+@keyframes subtle-pulse {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
   }
-
-  .mat-mdc-menu-content {
-    padding: 0.5rem 0 !important;
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
   }
-
-  .menu-item {
-    color: var(--text-medium) !important;
-    font-size: 0.875rem !important;
-    padding: 0.75rem 1.25rem !important;
-    text-decoration: none;
-    display: block;
-    width: 100%;
-    text-align: left;
-    background: none;
-    border: none;
-    transition: all 0.2s ease !important;
-    margin: 0.125rem 0 !important;
-
-    &:hover {
-      background-color: rgba(255, 112, 67, 0.06) !important;
-      color: var(--primary) !important;
-      transform: translateX(2px) !important;
-    }
-  }
-
-  .notification-menu {
-    min-width: 300px !important;
-    max-width: 350px !important;
-
-    .empty-notifications {
-      padding: 1.25rem;
-      text-align: center;
-      color: var(--text-light);
-      font-size: 0.875rem;
-      background-color: var(--surface);
-      border-radius: 6px;
-      margin: 0.5rem;
-    }
-  }
-
-  .mat-badge-content {
-    background-color: var(--primary) !important;
+  100% {
+    opacity: 0.9;
+    transform: scale(1);
   }
 }
 
+/* Media queries for responsive design */
 @media (max-width: 768px) {
   .navbar {
     height: var(--navbar-height, 60px);
@@ -263,85 +265,20 @@
   }
 }
 
-/* Notification header */
-::ng-deep .notification-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid #e0e0e0;
-
-  h3 {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 500;
-  }
+/* Dropdown menu positioning fix - simpler version */
+.menu-container {
+  position: relative;
 }
 
-/* Notification list */
-::ng-deep .notification-list {
-  max-height: 400px;
-  overflow-y: auto;
-
-  .notification-item {
-    display: flex;
-    padding: 16px;
-    border-bottom: 1px solid #f0f0f0;
-    cursor: pointer;
-    position: relative;
-    transition: background-color 0.2s ease;
-
-    &:hover {
-      background-color: #f9f9f9;
-    }
-
-    &.unread {
-      background-color: #f0f7ff;
-
-      &:hover {
-        background-color: #e6f0fa;
-      }
-    }
-
-    .notification-content {
-      flex: 1;
-
-      .notification-message {
-        font-size: 0.9rem;
-        margin-bottom: 4px;
-      }
-
-      .notification-time {
-        font-size: 0.8rem;
-        color: #757575;
-      }
-    }
-
-    .notification-status {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background-color: #ff6b00;
-      position: absolute;
-      right: 16px;
-      top: 16px;
-    }
-  }
-}
-
-/* No notifications message */
-::ng-deep .no-notifications {
-  padding: 24px 16px;
-  text-align: center;
-  color: #757575;
-  font-size: 0.9rem;
-}
-
-/* Custom styling for menu items */
-::ng-deep .custom-menu {
-  .menu-item {
-    font-size: 0.9rem;
-    height: 40px;
-    line-height: 40px;
+/* Specific fix for the Données de Base dropdown trigger */
+.nav-link[matMenuTriggerFor] {
+  cursor: pointer;
+  
+  &:after {
+    content: "▼";
+    font-size: 8px;
+    margin-left: 4px;
+    margin-top: 1px;
+    opacity: 0.7;
   }
 }

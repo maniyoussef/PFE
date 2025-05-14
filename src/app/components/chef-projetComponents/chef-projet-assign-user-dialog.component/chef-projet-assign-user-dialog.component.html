@@ -5,25 +5,30 @@
   </p>
 
   <!-- Loading spinner -->
-  <div *ngIf="isLoading" class="loading-container">
-    <mat-spinner diameter="40"></mat-spinner>
+  <div *ngIf="isLoading" class="loading-state">
+    <div class="spinner"></div>
     <p>Chargement des collaborateurs...</p>
   </div>
 
   <!-- Error message -->
   <div *ngIf="error && !isLoading" class="error-message">
     <p>{{ error }}</p>
+    <p>Veuillez réessayer ou contacter l'administrateur système.</p>
   </div>
 
-  <!-- Collaborator select -->
-  <mat-form-field *ngIf="!isLoading && !error && collaborateurs.length > 0" appearance="fill" class="full-width">
-    <mat-label>Sélectionner un collaborateur</mat-label>
-    <mat-select [(ngModel)]="selectedUser">
-      <mat-option *ngFor="let user of collaborateurs" [value]="user">
+  <!-- Standard Select dropdown for collaborateurs instead of mat-select -->
+  <div *ngIf="!isLoading && !error && collaborateurs.length > 0" class="form-group full-width">
+    <label for="collaborateurSelect">Sélectionner un collaborateur</label>
+    <select 
+      id="collaborateurSelect" 
+      class="form-control"
+      [(ngModel)]="selectedUser">
+      <option [ngValue]="null">-- Sélectionner un collaborateur --</option>
+      <option *ngFor="let user of collaborateurs" [ngValue]="user">
         {{ user.name }} {{ user.lastName }}
-      </mat-option>
-    </mat-select>
-  </mat-form-field>
+      </option>
+    </select>
+  </div>
 
   <!-- Empty state -->
   <div *ngIf="!isLoading && collaborateurs.length === 0 && !error" class="empty-state">

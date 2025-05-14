@@ -10,100 +10,95 @@
   <div *ngIf="!isLoading" class="form-container">
     <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
       <div class="slide-in" style="animation-delay: 0.05s">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Name</mat-label>
+        <div class="form-group">
+          <label for="nameInput">Name</label>
           <input
-            matInput
+            id="nameInput"
+            type="text"
+            class="form-control"
             formControlName="name"
             placeholder="Enter name"
             required
           />
-          <mat-icon matPrefix>person</mat-icon>
-          <mat-error *ngIf="userForm.controls['name'].hasError('required')">
+          <div class="error-message" *ngIf="userForm.controls['name'].invalid && userForm.controls['name'].touched">
             Name is required
-          </mat-error>
-        </mat-form-field>
+          </div>
+        </div>
       </div>
 
       <div class="slide-in" style="animation-delay: 0.1s">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Last Name</mat-label>
+        <div class="form-group">
+          <label for="lastNameInput">Last Name</label>
           <input
-            matInput
+            id="lastNameInput"
+            type="text"
+            class="form-control"
             formControlName="lastName"
             placeholder="Enter last name"
             required
           />
-          <mat-icon matPrefix>person</mat-icon>
-          <mat-error *ngIf="userForm.controls['lastName'].hasError('required')">
+          <div class="error-message" *ngIf="userForm.controls['lastName'].invalid && userForm.controls['lastName'].touched">
             Last name is required
-          </mat-error>
-        </mat-form-field>
+          </div>
+        </div>
       </div>
 
       <div class="slide-in" style="animation-delay: 0.15s">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Email</mat-label>
+        <div class="form-group">
+          <label for="emailInput">Email</label>
           <input
-            matInput
+            id="emailInput"
+            type="email"
+            class="form-control"
             formControlName="email"
             placeholder="Enter email"
             required
-            type="email"
           />
-          <mat-icon matPrefix>email</mat-icon>
-          <mat-error *ngIf="userForm.controls['email'].hasError('required')">
-            Email is required
-          </mat-error>
-          <mat-error *ngIf="userForm.controls['email'].hasError('email')">
-            Please enter a valid email address
-          </mat-error>
-        </mat-form-field>
+          <div class="error-message" *ngIf="userForm.controls['email'].invalid && userForm.controls['email'].touched">
+            <span *ngIf="userForm.controls['email'].hasError('required')">Email is required</span>
+            <span *ngIf="userForm.controls['email'].hasError('email')">Please enter a valid email address</span>
+          </div>
+        </div>
       </div>
 
+      <!-- Country Dropdown -->
       <div class="slide-in" style="animation-delay: 0.2s">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Country</mat-label>
-          <mat-select formControlName="countryId" required>
-            <mat-option *ngFor="let country of countries" [value]="country.id">
-              <div class="select-option">
-                <img
-                  *ngIf="country.icon"
-                  [src]="country.icon"
-                  alt="Flag"
-                  class="country-flag-small"
-                />
-                {{ country.name }}
-              </div>
-            </mat-option>
-          </mat-select>
-          <mat-icon matPrefix>public</mat-icon>
-          <mat-error
-            *ngIf="userForm.controls['countryId'].hasError('required')"
-          >
+        <div class="form-group">
+          <label for="countrySelect">Country</label>
+          <select id="countrySelect" 
+            class="form-control"
+            formControlName="countryId">
+            <option [value]="null" disabled>Select Country</option>
+            <option *ngFor="let country of countries" [value]="country.id">
+              {{ country.name }}
+            </option>
+          </select>
+          <div class="error-message" *ngIf="userForm.controls['countryId'].invalid && userForm.controls['countryId'].touched">
             Country is required
-          </mat-error>
-        </mat-form-field>
+          </div>
+        </div>
       </div>
 
+      <!-- Role Dropdown -->
       <div class="slide-in" style="animation-delay: 0.25s">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Role</mat-label>
-          <mat-select formControlName="roleId" required>
-            <mat-option *ngFor="let role of roles" [value]="role.id">
+        <div class="form-group">
+          <label for="roleSelect">Role</label>
+          <select id="roleSelect" 
+            class="form-control"
+            formControlName="roleId">
+            <option [value]="null" disabled>Select Role</option>
+            <option *ngFor="let role of roles" [value]="role.id">
               {{ role.name }}
-            </mat-option>
-          </mat-select>
-          <mat-icon matPrefix>badge</mat-icon>
-          <mat-error *ngIf="userForm.controls['roleId'].hasError('required')">
+            </option>
+          </select>
+          <div class="error-message" *ngIf="userForm.controls['roleId'].invalid && userForm.controls['roleId'].touched">
             Role is required
-          </mat-error>
-        </mat-form-field>
+          </div>
+        </div>
       </div>
 
       <div class="dialog-actions slide-in" style="animation-delay: 0.3s">
         <button
-          mat-button
           type="button"
           class="cancel-button"
           (click)="onCancel()"
@@ -111,8 +106,6 @@
           Cancel
         </button>
         <button
-          mat-raised-button
-          color="primary"
           type="submit"
           class="submit-button"
           [disabled]="userForm.invalid"

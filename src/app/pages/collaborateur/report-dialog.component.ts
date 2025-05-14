@@ -34,6 +34,7 @@ import { MatButtonModule } from '@angular/material/button';
         color="primary"
         (click)="submitReason()"
         [disabled]="data.isRequired && !reason.trim()"
+        class="submit-button"
       >
         Soumettre
       </button>
@@ -64,6 +65,16 @@ import { MatButtonModule } from '@angular/material/button';
       mat-dialog-actions {
         padding-top: 16px;
         margin-bottom: 0;
+      }
+      
+      .submit-button {
+        color: black !important;
+        font-weight: 500;
+      }
+      
+      /* Override Material styling */
+      ::ng-deep .mat-mdc-raised-button.mat-primary.submit-button {
+        color: black !important;
       }
     `,
   ],
